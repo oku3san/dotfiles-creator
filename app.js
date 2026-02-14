@@ -1,6 +1,10 @@
 // ── State ──────────────────────────────────────────────
+let selectedTool = null; // 'starship' or 'tmux'
 const TOTAL_STEPS = 6;
+const TMUX_TOTAL_STEPS = 5;
 let currentStep = 0;
+
+// Starship answers
 const answers = {
   style: null,
   character: null,
@@ -16,11 +20,59 @@ const answers = {
   rightPromptModules: [],
 };
 
+// tmux answers
+const tmuxAnswers = {
+  prefix: null,
+  mouse: true,
+  baseIndex: true,
+  renumber: true,
+  theme: null,
+  paneBorder: false,
+  activeBorder: true,
+  statusPosition: null,
+  statusModules: [],
+  statusInterval: 5,
+  splitKeys: null,
+  extraBindings: [],
+};
+
+// ── Tool Selection ────────────────────────────────────
+function selectTool() {
+  const toolOption = document.querySelector('.option[data-value="starship"].selected') ||
+                      document.querySelector('.option[data-value="tmux"].selected');
+  if (!toolOption) return;
+
+  selectedTool = toolOption.dataset.value;
+
+  // Hide tool selection
+  document.getElementById('step-tool-selection').classList.remove('visible');
+
+  // Show appropriate steps
+  if (selectedTool === 'starship') {
+    document.querySelectorAll('.starship-step').forEach(s => s.style.display = 'block');
+    document.querySelectorAll('.tmux-step').forEach(s => s.style.display = 'none');
+    showStep(0);
+  } else if (selectedTool === 'tmux') {
+    document.querySelectorAll('.starship-step').forEach(s => s.style.display = 'none');
+    document.querySelectorAll('.tmux-step').forEach(s => s.style.display = 'block');
+    showTmuxStep(0);
+  }
+}
+
+function goBackToToolSelection() {
+  selectedTool = null;
+  currentStep = 0;
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('visible'));
+  document.getElementById('step-tool-selection').classList.add('visible');
+  document.getElementById('progress').innerHTML = '';
+}
+
 // ── Progress bar ──────────────────────────────────────
 function renderProgress() {
   const bar = document.getElementById('progress');
   bar.innerHTML = '';
-  for (let i = 0; i < TOTAL_STEPS; i++) {
+  const totalSteps = selectedTool === 'tmux' ? TMUX_TOTAL_STEPS : TOTAL_STEPS;
+  for (let i = 0; i < totalSteps; i++) {
     const el = document.createElement('div');
     el.className = 'progress-step';
     if (i < currentStep) el.classList.add('done');
@@ -31,7 +83,7 @@ function renderProgress() {
 
 // ── Step navigation ───────────────────────────────────
 function showStep(index) {
-  document.querySelectorAll('.step').forEach((s, i) => {
+  document.querySelectorAll('.starship-step').forEach((s, i) => {
     s.classList.toggle('visible', i === index);
   });
   currentStep = index;
@@ -47,15 +99,38 @@ function showStep(index) {
   }
 }
 
+function showTmuxStep(index) {
+  document.querySelectorAll('.tmux-step').forEach((s, i) => {
+    s.classList.toggle('visible', i === index);
+  });
+  currentStep = index;
+  renderProgress();
+
+  if (index === TMUX_TOTAL_STEPS - 1) {
+    renderTmuxResult();
+  }
+}
+
 function nextStep() {
-  if (currentStep < TOTAL_STEPS - 1) showStep(currentStep + 1);
+  if (selectedTool === 'tmux') {
+    if (currentStep < TMUX_TOTAL_STEPS - 1) showTmuxStep(currentStep + 1);
+  } else {
+    if (currentStep < TOTAL_STEPS - 1) showStep(currentStep + 1);
+  }
 }
 
 function prevStep() {
-  if (currentStep > 0) showStep(currentStep - 1);
+  if (currentStep > 0) {
+    if (selectedTool === 'tmux') {
+      showTmuxStep(currentStep - 1);
+    } else {
+      showStep(currentStep - 1);
+    }
+  }
 }
 
 function goToStart() {
+  // Reset starship answers
   answers.style = null;
   answers.character = null;
   answers.customCharacter = '';
@@ -67,6 +142,21 @@ function goToStart() {
   answers.timeFormat = '%H:%M';
   answers.cmdDurationMinTime = 2000;
   answers.rightPromptModules = [];
+
+  // Reset tmux answers
+  tmuxAnswers.prefix = null;
+  tmuxAnswers.mouse = true;
+  tmuxAnswers.baseIndex = true;
+  tmuxAnswers.renumber = true;
+  tmuxAnswers.theme = null;
+  tmuxAnswers.paneBorder = false;
+  tmuxAnswers.activeBorder = true;
+  tmuxAnswers.statusPosition = null;
+  tmuxAnswers.statusModules = [];
+  tmuxAnswers.statusInterval = 5;
+  tmuxAnswers.splitKeys = null;
+  tmuxAnswers.extraBindings = [];
+
   document.querySelectorAll('.option.selected').forEach(o => o.classList.remove('selected'));
   document.querySelectorAll('.color-swatch.selected').forEach(o => o.classList.remove('selected'));
   const customCharInput = document.getElementById('custom-char-input');
@@ -75,10 +165,9 @@ function goToStart() {
   if (customColorInput) customColorInput.value = '#';
   const customColorPreview = document.getElementById('custom-color-preview');
   if (customColorPreview) customColorPreview.style.background = 'transparent';
-  updateNextButton(0);
-  updateNextButton(1);
-  updateNextButton(2);
-  showStep(0);
+
+  // Go back to tool selection
+  goBackToToolSelection();
 }
 
 function updateNextButton(stepIndex) {
@@ -102,6 +191,26 @@ function setupOptions() {
       option.addEventListener('click', () => {
         container.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
         option.classList.add('selected');
+
+        // Tool selection
+        if (key === 'tool') {
+          const btn = document.getElementById('btn-select-tool');
+          if (btn) btn.disabled = false;
+          return;
+        }
+
+        // tmux options
+        if (key.startsWith('tmux-')) {
+          tmuxAnswers[key.replace('tmux-', '')] = option.dataset.value;
+          const stepEl = option.closest('.step');
+          const stepId = stepEl?.id;
+          if (stepId === 'tmux-step-0') updateTmuxNextButton(0);
+          if (stepId === 'tmux-step-1') updateTmuxNextButton(1);
+          if (stepId === 'tmux-step-2') updateTmuxNextButton(2);
+          return;
+        }
+
+        // Starship options
         answers[key] = option.dataset.value;
         // Clear custom character if a preset is selected
         if (key === 'character' && option.dataset.value !== 'custom') {
@@ -123,6 +232,19 @@ function setupOptions() {
       option.addEventListener('click', () => {
         option.classList.toggle('selected');
         const val = option.dataset.value;
+
+        // tmux checkboxes
+        if (key.startsWith('tmux-')) {
+          const tmuxKey = key.replace('tmux-', '');
+          if (option.classList.contains('selected')) {
+            if (!tmuxAnswers[tmuxKey].includes(val)) tmuxAnswers[tmuxKey].push(val);
+          } else {
+            tmuxAnswers[tmuxKey] = tmuxAnswers[tmuxKey].filter(v => v !== val);
+          }
+          return;
+        }
+
+        // Starship checkboxes
         if (option.classList.contains('selected')) {
           if (!answers[key].includes(val)) answers[key].push(val);
         } else {
@@ -187,6 +309,68 @@ function setupOptions() {
         if (customPreview) customPreview.style.background = 'transparent';
       }
     });
+  }
+
+  // tmux specific listeners
+  setupTmuxListeners();
+}
+
+// ── tmux option listeners ─────────────────────────────
+function setupTmuxListeners() {
+  const tmuxMouse = document.getElementById('tmux-mouse');
+  if (tmuxMouse) {
+    tmuxMouse.addEventListener('change', () => {
+      tmuxAnswers.mouse = tmuxMouse.checked;
+    });
+  }
+
+  const tmuxBaseIndex = document.getElementById('tmux-base-index');
+  if (tmuxBaseIndex) {
+    tmuxBaseIndex.addEventListener('change', () => {
+      tmuxAnswers.baseIndex = tmuxBaseIndex.checked;
+    });
+  }
+
+  const tmuxRenumber = document.getElementById('tmux-renumber');
+  if (tmuxRenumber) {
+    tmuxRenumber.addEventListener('change', () => {
+      tmuxAnswers.renumber = tmuxRenumber.checked;
+    });
+  }
+
+  const tmuxPaneBorder = document.getElementById('tmux-pane-border');
+  if (tmuxPaneBorder) {
+    tmuxPaneBorder.addEventListener('change', () => {
+      tmuxAnswers.paneBorder = tmuxPaneBorder.checked;
+    });
+  }
+
+  const tmuxActiveBorder = document.getElementById('tmux-active-border');
+  if (tmuxActiveBorder) {
+    tmuxActiveBorder.addEventListener('change', () => {
+      tmuxAnswers.activeBorder = tmuxActiveBorder.checked;
+    });
+  }
+
+  const tmuxStatusInterval = document.getElementById('tmux-status-interval');
+  if (tmuxStatusInterval) {
+    tmuxStatusInterval.addEventListener('input', () => {
+      tmuxAnswers.statusInterval = parseInt(tmuxStatusInterval.value, 10);
+      document.getElementById('tmux-status-interval-val').textContent = tmuxStatusInterval.value + '秒';
+    });
+  }
+}
+
+function updateTmuxNextButton(stepIndex) {
+  const btn = document.getElementById(`btn-tmux-next-${stepIndex}`);
+  if (!btn) return;
+
+  if (stepIndex === 0) {
+    btn.disabled = tmuxAnswers.prefix === null;
+  } else if (stepIndex === 1) {
+    btn.disabled = tmuxAnswers.theme === null;
+  } else if (stepIndex === 2) {
+    btn.disabled = tmuxAnswers.statusPosition === null;
   }
 }
 
@@ -744,6 +928,212 @@ function downloadConfig() {
   const a = document.createElement('a');
   a.href = url;
   a.download = 'starship.toml';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ── tmux config generation ───────────────────────────
+function generateTmuxConfig() {
+  const lines = [];
+
+  lines.push('# tmux Configuration');
+  lines.push('# Generated by Dotfiles Config Generator');
+  lines.push('');
+
+  // Prefix key
+  if (tmuxAnswers.prefix && tmuxAnswers.prefix !== 'C-b') {
+    lines.push('# Change prefix key');
+    lines.push('unbind C-b');
+    lines.push(`set -g prefix ${tmuxAnswers.prefix}`);
+    lines.push(`bind ${tmuxAnswers.prefix} send-prefix`);
+    lines.push('');
+  }
+
+  // Basic settings
+  lines.push('# Basic settings');
+  if (tmuxAnswers.mouse) {
+    lines.push('set -g mouse on');
+  }
+  if (tmuxAnswers.baseIndex) {
+    lines.push('set -g base-index 1');
+    lines.push('setw -g pane-base-index 1');
+  }
+  if (tmuxAnswers.renumber) {
+    lines.push('set -g renumber-windows on');
+  }
+  lines.push('set -g escape-time 10');
+  lines.push('set -g history-limit 10000');
+  lines.push('');
+
+  // Colors
+  lines.push('# Colors');
+  lines.push('set -g default-terminal "screen-256color"');
+  lines.push('');
+
+  // Theme
+  const theme = tmuxAnswers.theme;
+  if (theme && theme !== 'default') {
+    lines.push(`# ${theme.charAt(0).toUpperCase() + theme.slice(1)} theme`);
+    const themeColors = getThemeColors(theme);
+    lines.push(`set -g status-style "bg=${themeColors.statusBg},fg=${themeColors.statusFg}"`);
+    if (tmuxAnswers.activeBorder) {
+      lines.push(`set -g pane-active-border-style "fg=${themeColors.activeBorder}"`);
+    }
+    lines.push(`set -g pane-border-style "fg=${themeColors.border}"`);
+    lines.push(`set -g window-status-current-style "bg=${themeColors.activeBg},fg=${themeColors.activeFg}"`);
+    lines.push('');
+  } else if (tmuxAnswers.activeBorder) {
+    lines.push('# Active pane border');
+    lines.push('set -g pane-active-border-style "fg=green"');
+    lines.push('');
+  }
+
+  // Status bar
+  lines.push('# Status bar');
+  lines.push(`set -g status-position ${tmuxAnswers.statusPosition || 'bottom'}`);
+  lines.push(`set -g status-interval ${tmuxAnswers.statusInterval}`);
+
+  const leftParts = [];
+  const rightParts = [];
+
+  if (tmuxAnswers.statusModules.includes('session')) {
+    leftParts.push('[#S]');
+  }
+  if (tmuxAnswers.statusModules.includes('hostname')) {
+    rightParts.push('#H');
+  }
+  if (tmuxAnswers.statusModules.includes('datetime')) {
+    rightParts.push('%Y-%m-%d %H:%M');
+  }
+  if (tmuxAnswers.statusModules.includes('load')) {
+    rightParts.push('#(uptime | cut -d "," -f 3-)');
+  }
+
+  if (leftParts.length > 0) {
+    lines.push(`set -g status-left "${leftParts.join(' ')} "`);
+  }
+  if (rightParts.length > 0) {
+    lines.push(`set -g status-right " ${rightParts.join(' | ')}"`);
+  }
+  lines.push('');
+
+  // Split keys
+  const splitKeys = tmuxAnswers.splitKeys;
+  if (splitKeys && splitKeys !== 'default') {
+    lines.push('# Pane splitting');
+    if (splitKeys === 'vim') {
+      lines.push('bind | split-window -h');
+      lines.push('bind - split-window -v');
+    } else if (splitKeys === 'intuitive') {
+      lines.push('bind h split-window -h');
+      lines.push('bind v split-window -v');
+    }
+    lines.push('unbind \'"\'');
+    lines.push('unbind %');
+    lines.push('');
+  }
+
+  // Extra bindings
+  const extraBindings = tmuxAnswers.extraBindings;
+  if (extraBindings.length > 0) {
+    lines.push('# Additional keybindings');
+
+    if (extraBindings.includes('vim-navigation')) {
+      lines.push('# Vim-style pane navigation');
+      lines.push('bind h select-pane -L');
+      lines.push('bind j select-pane -D');
+      lines.push('bind k select-pane -U');
+      lines.push('bind l select-pane -R');
+    }
+
+    if (extraBindings.includes('vim-resize')) {
+      lines.push('# Vim-style pane resizing');
+      lines.push('bind -r H resize-pane -L 5');
+      lines.push('bind -r J resize-pane -D 5');
+      lines.push('bind -r K resize-pane -U 5');
+      lines.push('bind -r L resize-pane -R 5');
+    }
+
+    if (extraBindings.includes('reload')) {
+      lines.push('# Reload configuration');
+      lines.push('bind r source-file ~/.tmux.conf \\; display "Config reloaded!"');
+    }
+
+    if (extraBindings.includes('copy-mode-vi')) {
+      lines.push('# Vi mode for copy');
+      lines.push('setw -g mode-keys vi');
+      lines.push('bind -T copy-mode-vi v send-keys -X begin-selection');
+      lines.push('bind -T copy-mode-vi y send-keys -X copy-selection-and-cancel');
+    }
+
+    lines.push('');
+  }
+
+  return lines.join('\n');
+}
+
+function getThemeColors(theme) {
+  const themes = {
+    nord: {
+      statusBg: '#2E3440',
+      statusFg: '#D8DEE9',
+      activeBorder: '#88C0D0',
+      border: '#4C566A',
+      activeBg: '#5E81AC',
+      activeFg: '#ECEFF4',
+    },
+    dracula: {
+      statusBg: '#282a36',
+      statusFg: '#f8f8f2',
+      activeBorder: '#bd93f9',
+      border: '#44475a',
+      activeBg: '#bd93f9',
+      activeFg: '#282a36',
+    },
+    gruvbox: {
+      statusBg: '#282828',
+      statusFg: '#ebdbb2',
+      activeBorder: '#fe8019',
+      border: '#3c3836',
+      activeBg: '#fe8019',
+      activeFg: '#282828',
+    },
+    github: {
+      statusBg: '#161b22',
+      statusFg: '#e6edf3',
+      activeBorder: '#dd6620',
+      border: '#30363d',
+      activeBg: '#dd6620',
+      activeFg: '#ffffff',
+    },
+  };
+  return themes[theme] || themes.github;
+}
+
+// ── tmux result rendering ─────────────────────────────
+function renderTmuxResult() {
+  const config = generateTmuxConfig();
+  document.getElementById('tmux-config-output').textContent = config;
+}
+
+function copyTmuxConfig() {
+  const text = document.getElementById('tmux-config-output').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const toast = document.getElementById('toast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2000);
+  });
+}
+
+function downloadTmuxConfig() {
+  const text = document.getElementById('tmux-config-output').textContent;
+  const blob = new Blob([text], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '.tmux.conf';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

@@ -555,15 +555,36 @@
 </head>
 <body>
   <header>
-    <h1><span>Starship</span> Config Generator</h1>
-    <p>対話形式で starship.toml を生成します</p>
+    <h1><span>Dotfiles</span> Config Generator</h1>
+    <p>対話形式で設定ファイルを生成します</p>
   </header>
 
   <div class="container">
     <div class="progress" id="progress"></div>
 
+    <!-- Tool Selection -->
+    <div class="step visible" id="step-tool-selection">
+      <h2>生成するコンフィグを選択</h2>
+      <p class="description">どのツールの設定ファイルを作成しますか？</p>
+      <div class="options" data-key="tool" data-type="radio">
+        <div class="option" data-value="starship">
+          <div class="option-radio"></div>
+          <div class="option-label">Starship<small>シェルプロンプトの設定 (starship.toml)</small></div>
+        </div>
+        <div class="option" data-value="tmux">
+          <div class="option-radio"></div>
+          <div class="option-label">tmux<small>ターミナルマルチプレクサの設定 (.tmux.conf)</small></div>
+        </div>
+      </div>
+      <div class="nav">
+        <div></div>
+        <button class="primary" onclick="selectTool()" id="btn-select-tool" disabled>次へ</button>
+      </div>
+    </div>
+
+    <!-- Starship Steps -->
     <!-- Step 0: Prompt style -->
-    <div class="step visible" id="step-0">
+    <div class="step starship-step" id="step-0">
       <h2>プロンプトのスタイル</h2>
       <p class="description">ベースとなるプロンプトレイアウトを選んでください</p>
       <div class="options" data-key="style" data-type="radio">
@@ -591,7 +612,7 @@
     </div>
 
     <!-- Step 1: Prompt character -->
-    <div class="step" id="step-1">
+    <div class="step starship-step" id="step-1">
       <h2>プロンプト記号</h2>
       <p class="description">入力カーソルの前に表示される記号を選んでください</p>
       <div class="options" data-key="character" data-type="radio">
@@ -623,7 +644,7 @@
     </div>
 
     <!-- Step 2: Accent color -->
-    <div class="step" id="step-2">
+    <div class="step starship-step" id="step-2">
       <h2>アクセントカラー</h2>
       <p class="description">ディレクトリ名やプロンプト記号の色を選んでください</p>
       <div class="color-options" data-key="color" data-type="color">
@@ -648,7 +669,7 @@
     </div>
 
     <!-- Step 3: Modules -->
-    <div class="step" id="step-3">
+    <div class="step starship-step" id="step-3">
       <h2>有効にするモジュール</h2>
       <p class="description">プロンプトに表示したい情報を選んでください（複数選択可）</p>
       <div class="options" data-key="modules" data-type="checkbox">
@@ -708,7 +729,7 @@
     </div>
 
     <!-- Step 4: Detail settings -->
-    <div class="step" id="step-4">
+    <div class="step starship-step" id="step-4">
       <h2>詳細設定</h2>
       <p class="description">各モジュールの細かい設定を調整できます</p>
       <div id="detail-settings"></div>
@@ -719,7 +740,7 @@
     </div>
 
     <!-- Step 5: Result -->
-    <div class="step" id="step-5">
+    <div class="step starship-step" id="step-5">
       <h2>生成結果</h2>
       <p class="description">以下の設定を <code>~/.config/starship.toml</code> に保存してください</p>
       <div class="prompt-preview" id="prompt-preview"></div>
@@ -729,6 +750,240 @@
       <div class="result-actions">
         <button class="primary" onclick="copyConfig()">クリップボードにコピー</button>
         <button onclick="downloadConfig()">starship.toml をダウンロード</button>
+        <button onclick="goToStart()">最初からやり直す</button>
+      </div>
+      <div class="nav" style="margin-top:1rem">
+        <button onclick="prevStep()">戻って編集</button>
+        <div></div>
+      </div>
+    </div>
+
+    <!-- tmux Steps -->
+    <!-- tmux Step 0: Prefix & Basic Settings -->
+    <div class="step tmux-step" id="tmux-step-0">
+      <h2>プレフィックスキーと基本設定</h2>
+      <p class="description">tmux の基本的な動作を設定します</p>
+      <div class="detail-section">
+        <h3>プレフィックスキー</h3>
+        <div class="options" data-key="tmux-prefix" data-type="radio">
+          <div class="option" data-value="C-b">
+            <div class="option-radio"></div>
+            <div class="option-label">Ctrl+b<small>デフォルト</small></div>
+          </div>
+          <div class="option" data-value="C-a">
+            <div class="option-radio"></div>
+            <div class="option-label">Ctrl+a<small>GNU Screen スタイル</small></div>
+          </div>
+          <div class="option" data-value="C-Space">
+            <div class="option-radio"></div>
+            <div class="option-label">Ctrl+Space<small>モダンなスタイル</small></div>
+          </div>
+        </div>
+      </div>
+      <div class="detail-section">
+        <h3>基本オプション</h3>
+        <div class="detail-row">
+          <label for="tmux-mouse">マウス操作を有効化</label>
+          <div class="detail-control">
+            <label class="toggle">
+              <input type="checkbox" id="tmux-mouse" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="detail-row">
+          <label for="tmux-base-index">ウィンドウ番号を1から開始</label>
+          <div class="detail-control">
+            <label class="toggle">
+              <input type="checkbox" id="tmux-base-index" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="detail-row">
+          <label for="tmux-renumber">ウィンドウ削除時に番号を詰める</label>
+          <div class="detail-control">
+            <label class="toggle">
+              <input type="checkbox" id="tmux-renumber" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="nav">
+        <button onclick="goBackToToolSelection()">ツール選択に戻る</button>
+        <button class="primary" onclick="nextStep()" id="btn-tmux-next-0" disabled>次へ</button>
+      </div>
+    </div>
+
+    <!-- tmux Step 1: Color Scheme -->
+    <div class="step tmux-step" id="tmux-step-1">
+      <h2>カラースキーム・外観</h2>
+      <p class="description">tmux の色と見た目を選択します</p>
+      <div class="detail-section">
+        <h3>カラーテーマ</h3>
+        <div class="options" data-key="tmux-theme" data-type="radio">
+          <div class="option" data-value="default">
+            <div class="option-radio"></div>
+            <div class="option-label">デフォルト<small>tmux の標準カラー</small></div>
+          </div>
+          <div class="option" data-value="nord">
+            <div class="option-radio"></div>
+            <div class="option-label">Nord<small>青系の落ち着いたテーマ</small></div>
+          </div>
+          <div class="option" data-value="dracula">
+            <div class="option-radio"></div>
+            <div class="option-label">Dracula<small>紫系のダークテーマ</small></div>
+          </div>
+          <div class="option" data-value="gruvbox">
+            <div class="option-radio"></div>
+            <div class="option-label">Gruvbox<small>レトロな暖色系テーマ</small></div>
+          </div>
+          <div class="option" data-value="github">
+            <div class="option-radio"></div>
+            <div class="option-label">GitHub Dark<small>GitHub 風のダークテーマ</small></div>
+          </div>
+        </div>
+      </div>
+      <div class="detail-section">
+        <h3>ペインの外観</h3>
+        <div class="detail-row">
+          <label for="tmux-pane-border">ペイン境界線を太くする</label>
+          <div class="detail-control">
+            <label class="toggle">
+              <input type="checkbox" id="tmux-pane-border">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="detail-row">
+          <label for="tmux-active-border">アクティブペインを強調表示</label>
+          <div class="detail-control">
+            <label class="toggle">
+              <input type="checkbox" id="tmux-active-border" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="nav">
+        <button onclick="prevStep()">戻る</button>
+        <button class="primary" onclick="nextStep()" id="btn-tmux-next-1" disabled>次へ</button>
+      </div>
+    </div>
+
+    <!-- tmux Step 2: Status Bar -->
+    <div class="step tmux-step" id="tmux-step-2">
+      <h2>ステータスバー</h2>
+      <p class="description">ステータスバーの表示内容をカスタマイズします</p>
+      <div class="detail-section">
+        <h3>ステータスバーの位置</h3>
+        <div class="options" data-key="tmux-status-position" data-type="radio">
+          <div class="option" data-value="bottom">
+            <div class="option-radio"></div>
+            <div class="option-label">下<small>デフォルト</small></div>
+          </div>
+          <div class="option" data-value="top">
+            <div class="option-radio"></div>
+            <div class="option-label">上</div>
+          </div>
+        </div>
+      </div>
+      <div class="detail-section">
+        <h3>表示する情報</h3>
+        <div class="options" data-key="tmux-status-modules" data-type="checkbox">
+          <div class="option" data-value="session">
+            <div class="option-check"></div>
+            <div class="option-label">セッション名<small>現在のセッション名を表示</small></div>
+          </div>
+          <div class="option" data-value="hostname">
+            <div class="option-check"></div>
+            <div class="option-label">ホスト名<small>マシンのホスト名を表示</small></div>
+          </div>
+          <div class="option" data-value="datetime">
+            <div class="option-check"></div>
+            <div class="option-label">日時<small>現在の日時を表示</small></div>
+          </div>
+          <div class="option" data-value="load">
+            <div class="option-check"></div>
+            <div class="option-label">CPU負荷<small>システム負荷を表示</small></div>
+          </div>
+        </div>
+      </div>
+      <div class="detail-section">
+        <h3>その他の設定</h3>
+        <div class="detail-row">
+          <label for="tmux-status-interval">更新間隔</label>
+          <div class="detail-control">
+            <input type="range" id="tmux-status-interval" min="1" max="60" value="5">
+            <span id="tmux-status-interval-val">5秒</span>
+          </div>
+        </div>
+      </div>
+      <div class="nav">
+        <button onclick="prevStep()">戻る</button>
+        <button class="primary" onclick="nextStep()" id="btn-tmux-next-2" disabled>次へ</button>
+      </div>
+    </div>
+
+    <!-- tmux Step 3: Keybindings -->
+    <div class="step tmux-step" id="tmux-step-3">
+      <h2>キーバインド</h2>
+      <p class="description">よく使う操作のキーバインドを設定します</p>
+      <div class="detail-section">
+        <h3>ペイン操作</h3>
+        <div class="options" data-key="tmux-split-keys" data-type="radio">
+          <div class="option" data-value="default">
+            <div class="option-radio"></div>
+            <div class="option-label">デフォルト<small>% (縦分割), " (横分割)</small></div>
+          </div>
+          <div class="option" data-value="vim">
+            <div class="option-radio"></div>
+            <div class="option-label">Vim スタイル<small>| (縦分割), - (横分割)</small></div>
+          </div>
+          <div class="option" data-value="intuitive">
+            <div class="option-radio"></div>
+            <div class="option-label">直感的<small>h (縦分割), v (横分割)</small></div>
+          </div>
+        </div>
+      </div>
+      <div class="detail-section">
+        <h3>追加機能</h3>
+        <div class="options" data-key="tmux-extra-bindings" data-type="checkbox">
+          <div class="option" data-value="vim-navigation">
+            <div class="option-check"></div>
+            <div class="option-label">Vim スタイルのペイン移動<small>h,j,k,l でペイン移動</small></div>
+          </div>
+          <div class="option" data-value="vim-resize">
+            <div class="option-check"></div>
+            <div class="option-label">Vim スタイルのペインリサイズ<small>H,J,K,L でペインサイズ変更</small></div>
+          </div>
+          <div class="option" data-value="reload">
+            <div class="option-check"></div>
+            <div class="option-label">設定リロード<small>prefix + r で設定再読み込み</small></div>
+          </div>
+          <div class="option" data-value="copy-mode-vi">
+            <div class="option-check"></div>
+            <div class="option-label">Vi モードコピー<small>コピーモードで vi キーバインドを使用</small></div>
+          </div>
+        </div>
+      </div>
+      <div class="nav">
+        <button onclick="prevStep()">戻る</button>
+        <button class="primary" onclick="nextStep()">生成する</button>
+      </div>
+    </div>
+
+    <!-- tmux Step 4: Result -->
+    <div class="step tmux-step" id="tmux-step-4">
+      <h2>生成結果</h2>
+      <p class="description">以下の設定を <code>~/.tmux.conf</code> に保存してください</p>
+      <div class="result-area">
+        <div class="config-preview" id="tmux-config-output"></div>
+      </div>
+      <div class="result-actions">
+        <button class="primary" onclick="copyTmuxConfig()">クリップボードにコピー</button>
+        <button onclick="downloadTmuxConfig()">.tmux.conf をダウンロード</button>
         <button onclick="goToStart()">最初からやり直す</button>
       </div>
       <div class="nav" style="margin-top:1rem">
