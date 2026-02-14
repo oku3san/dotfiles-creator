@@ -1,54 +1,88 @@
 # CLAUDE.md
 
-## Project Overview
+## プロジェクト概要
 
-**dotfiles-creator** is a tool for generating and managing dotfiles configurations. The repository is in its initial stage of development.
+**dotfiles-creator** は **Starship Config Generator** です。[Starship](https://starship.rs) のシェルプロンプト設定を、対話形式のウィザードで生成するクライアントサイドのシングルページWebアプリケーションです。UIは日本語です。
 
-- **Owner:** oku3san
-- **Repository:** [oku3san/dotfiles-creator](https://github.com/oku3san/dotfiles-creator)
+- **オーナー:** oku3san
+- **リポジトリ:** [oku3san/dotfiles-creator](https://github.com/oku3san/dotfiles-creator)
 
-## Repository Structure
-
-This is a newly initialized repository. As the project grows, this section should be updated to reflect the directory layout and key files.
+## リポジトリ構成
 
 ```
 dotfiles-creator/
-├── CLAUDE.md          # This file — guidance for AI assistants
-└── (project files to be added)
+├── CLAUDE.md       # このファイル — AIアシスタント向けガイド
+├── .gitignore      # OS/エディタの一時ファイルを除外 (.DS_Store, Thumbs.db, *.swp)
+├── index.html      # HTML + 埋め込みCSS — 5ステップウィザードのUI全体
+└── app.js          # Vanilla JavaScript — 状態管理、ナビゲーション、設定生成
 ```
 
-## Development Setup
+**依存関係、ビルドツール、パッケージマネージャー、フレームワークは一切なし**。静的ファイルとしてそのまま配信されます。
 
-_To be updated as the project takes shape._ Document the following once established:
+## 技術スタック
 
-- Language/runtime requirements and versions
-- Dependency installation steps
-- Environment variables or configuration needed
+- **言語:** Vanilla JavaScript (ES6+)、HTML5、CSS3
+- **フレームワーク/ライブラリ:** なし
+- **ビルドシステム:** なし — ブラウザで `index.html` を直接開く
+- **テスト:** 未設定
+- **リンター:** 未設定
 
-## Common Commands
+## 開発環境セットアップ
 
-_To be updated once build tooling is configured._ Expected entries:
+インストール不要。ローカルで実行するには：
 
-- **Install dependencies:** (e.g., `npm install`, `pip install -r requirements.txt`)
-- **Run the project:** (e.g., `npm start`, `go run .`)
-- **Run tests:** (e.g., `npm test`, `pytest`)
-- **Lint/format:** (e.g., `npm run lint`, `cargo fmt`)
-- **Build:** (e.g., `npm run build`, `make`)
+1. `index.html` をブラウザで開く
 
-## Coding Conventions
+依存関係のインストール、環境変数、ビルドステップは不要です。
 
-When contributing to this project, follow these guidelines:
+## アプリの動作
 
-- Keep changes minimal and focused on the task at hand
-- Do not add unnecessary abstractions or over-engineer solutions
-- Write clear commit messages that explain the "why" not just the "what"
-- Prefer simple, readable code over clever code
-- Update this CLAUDE.md file when adding new tooling, commands, or project structure changes
+ウィザードは5つのステップでユーザーを案内します：
 
-## AI Assistant Guidelines
+1. **Step 0 — プロンプトスタイル:** レイアウトを選択（plain、nerd font icons、bracketed、multi-line）
+2. **Step 1 — プロンプト記号:** カーソル記号を選択（❯、$、➜、λ）
+3. **Step 2 — アクセントカラー:** 8色のプリセットから選択（cyan、green、blue、purple、yellow、red、white、orange）
+4. **Step 3 — モジュール:** 有効にする Starship モジュールを選択（複数選択可）
+5. **Step 4 — 生成結果:** 生成された TOML 設定を表示、プロンプトのプレビュー、コピーまたはダウンロード
 
-- **Read before editing:** Always read files before proposing changes
-- **Stay in scope:** Only make changes that are directly requested or clearly necessary
-- **Test your changes:** Run available tests and linters before considering work complete
-- **Update docs:** If you add tooling, scripts, or change the project structure, update this file
-- **Branch workflow:** Develop on feature branches, not directly on `main`
+### 対応 Starship モジュール
+
+Git、Node.js、Python、Go、Rust、Docker、AWS、Kubernetes、Terraform、Time、Battery、Command Duration
+
+## コードアーキテクチャ
+
+### `app.js`（421行）
+
+| セクション | 関数 | 役割 |
+|---|---|---|
+| 状態管理 | `answers`, `TOTAL_STEPS` | ユーザーの選択を保持（style, character, color, modules） |
+| プログレスバー | `renderProgress()` | ステップインジケーターを描画 |
+| ナビゲーション | `showStep()`, `nextStep()`, `prevStep()`, `goToStart()` | ウィザードのステップ間を移動 |
+| 入力ハンドラ | `setupOptions()`, `updateNextButton()` | ラジオボタン、チェックボックス、カラースウォッチのクリック処理 |
+| 設定生成 | `generateConfig()`, `buildFormatParts()`, `addModuleVars()` | 選択内容から Starship TOML を生成 |
+| プレビュー | `buildPromptPreview()` | プロンプトの HTML プレビューを作成 |
+| 結果表示 | `renderResult()`, `copyConfig()`, `downloadConfig()` | 出力表示、クリップボードコピー、ファイルダウンロード |
+
+### `index.html`（510行）
+
+HTML構造と埋め込みCSSをすべて含みます。CSSカスタムプロパティによるテーマ設定（GitHub風ダークモード）を使用。主なCSS変数は `:root` で定義されています（例: `--bg`, `--surface`, `--accent`）。
+
+## コーディング規約
+
+- 変更は最小限にし、タスクに集中する
+- 不要な抽象化や過剰な設計を避ける
+- コミットメッセージは「何を」ではなく「なぜ」を説明する
+- 巧妙なコードより読みやすいコードを優先する
+- `app.js` では `// ── タイトル ──` スタイルのセクション区切りコメントを使用
+- 外部依存なし — フレームワークを導入せず Vanilla JS を維持する
+- UIテキストは日本語、コメントとコード識別子は英語
+- ファイル追加、ツール導入、プロジェクト構成変更時にこの CLAUDE.md を更新する
+
+## AIアシスタント向けガイドライン
+
+- **編集前に読む:** 変更を提案する前に必ずファイルを読む
+- **スコープ内に留まる:** 直接依頼されたか、明らかに必要な変更のみ行う
+- **ブラウザで検証:** テストがないため、変更が正しく表示されることを可能な限り手動で確認する
+- **ドキュメント更新:** ファイル追加、ツール導入、プロジェクト構成変更時にこのファイルを更新する
+- **ブランチワークフロー:** `main` に直接コミットせず、フィーチャーブランチで開発する
+- **シンプルに保つ:** このプロジェクトは意図的に依存関係ゼロ — 明示的に要求されない限りビルドツールやフレームワークを導入しない
