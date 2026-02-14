@@ -809,6 +809,34 @@
             </label>
           </div>
         </div>
+        <div class="detail-row">
+          <label for="tmux-auto-rename">ウィンドウ名の自動リネーム</label>
+          <div class="detail-control">
+            <label class="toggle">
+              <input type="checkbox" id="tmux-auto-rename">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="detail-row">
+          <label for="tmux-visual-bell">ビジュアルベル（音の代わりに画面点滅）</label>
+          <div class="detail-control">
+            <label class="toggle">
+              <input type="checkbox" id="tmux-visual-bell" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="detail-section">
+        <h3>ヒストリー設定</h3>
+        <div class="detail-row">
+          <label for="tmux-history-limit">スクロールバック行数</label>
+          <div class="detail-control">
+            <input type="range" id="tmux-history-limit" min="1000" max="50000" step="1000" value="10000">
+            <span id="tmux-history-limit-val">10000</span>
+          </div>
+        </div>
       </div>
       <div class="nav">
         <button onclick="goBackToToolSelection()">ツール選択に戻る</button>
@@ -919,6 +947,30 @@
             <span id="tmux-status-interval-val">5秒</span>
           </div>
         </div>
+        <div class="detail-row">
+          <label for="tmux-status-left-length">左ステータス最大文字数</label>
+          <div class="detail-control">
+            <input type="range" id="tmux-status-left-length" min="10" max="100" step="10" value="40">
+            <span id="tmux-status-left-length-val">40</span>
+          </div>
+        </div>
+        <div class="detail-row">
+          <label for="tmux-status-right-length">右ステータス最大文字数</label>
+          <div class="detail-control">
+            <input type="range" id="tmux-status-right-length" min="10" max="100" step="10" value="50">
+            <span id="tmux-status-right-length-val">50</span>
+          </div>
+        </div>
+        <div class="detail-row">
+          <label for="tmux-status-justify">ウィンドウリストの位置</label>
+          <div class="detail-control">
+            <select id="tmux-status-justify" style="background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem; color: var(--text); font-size: 0.9rem;">
+              <option value="left">左</option>
+              <option value="centre" selected>中央</option>
+              <option value="right">右</option>
+            </select>
+          </div>
+        </div>
       </div>
       <div class="nav">
         <button onclick="prevStep()">戻る</button>
@@ -965,6 +1017,18 @@
           <div class="option" data-value="copy-mode-vi">
             <div class="option-check"></div>
             <div class="option-label">Vi モードコピー<small>コピーモードで vi キーバインドを使用</small></div>
+          </div>
+          <div class="option" data-value="swap-panes">
+            <div class="option-check"></div>
+            <div class="option-label">ペイン入れ替え<small>prefix + { / } でペインを入れ替え</small></div>
+          </div>
+          <div class="option" data-value="synchronize">
+            <div class="option-check"></div>
+            <div class="option-label">ペイン同期<small>prefix + S でペイン同期切り替え</small></div>
+          </div>
+          <div class="option" data-value="window-move">
+            <div class="option-check"></div>
+            <div class="option-label">ウィンドウ移動<small>Shift+左右矢印でウィンドウ切り替え</small></div>
           </div>
         </div>
       </div>
