@@ -12,6 +12,7 @@
 ```
 dotfiles-creator/
 ├── CLAUDE.md       # このファイル — AIアシスタント向けガイド
+├── README.md       # プロジェクト紹介・使い方ガイド
 ├── .gitignore      # OS/エディタの一時ファイルを除外 (.DS_Store, Thumbs.db, *.swp)
 ├── index.html      # HTML + 埋め込みCSS — 5ステップウィザードのUI全体
 └── app.js          # Vanilla JavaScript — 状態管理、ナビゲーション、設定生成
