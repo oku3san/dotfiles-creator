@@ -26,12 +26,18 @@ const tmuxAnswers = {
   mouse: true,
   baseIndex: true,
   renumber: true,
+  autoRename: false,
+  visualBell: true,
+  historyLimit: 10000,
   theme: null,
   paneBorder: false,
   activeBorder: true,
   statusPosition: null,
   statusModules: [],
   statusInterval: 5,
+  statusLeftLength: 40,
+  statusRightLength: 50,
+  statusJustify: 'centre',
   splitKeys: null,
   extraBindings: [],
 };
@@ -148,12 +154,18 @@ function goToStart() {
   tmuxAnswers.mouse = true;
   tmuxAnswers.baseIndex = true;
   tmuxAnswers.renumber = true;
+  tmuxAnswers.autoRename = false;
+  tmuxAnswers.visualBell = true;
+  tmuxAnswers.historyLimit = 10000;
   tmuxAnswers.theme = null;
   tmuxAnswers.paneBorder = false;
   tmuxAnswers.activeBorder = true;
   tmuxAnswers.statusPosition = null;
   tmuxAnswers.statusModules = [];
   tmuxAnswers.statusInterval = 5;
+  tmuxAnswers.statusLeftLength = 40;
+  tmuxAnswers.statusRightLength = 50;
+  tmuxAnswers.statusJustify = 'centre';
   tmuxAnswers.splitKeys = null;
   tmuxAnswers.extraBindings = [];
 
@@ -357,6 +369,51 @@ function setupTmuxListeners() {
     tmuxStatusInterval.addEventListener('input', () => {
       tmuxAnswers.statusInterval = parseInt(tmuxStatusInterval.value, 10);
       document.getElementById('tmux-status-interval-val').textContent = tmuxStatusInterval.value + '秒';
+    });
+  }
+
+  const tmuxAutoRename = document.getElementById('tmux-auto-rename');
+  if (tmuxAutoRename) {
+    tmuxAutoRename.addEventListener('change', () => {
+      tmuxAnswers.autoRename = tmuxAutoRename.checked;
+    });
+  }
+
+  const tmuxVisualBell = document.getElementById('tmux-visual-bell');
+  if (tmuxVisualBell) {
+    tmuxVisualBell.addEventListener('change', () => {
+      tmuxAnswers.visualBell = tmuxVisualBell.checked;
+    });
+  }
+
+  const tmuxHistoryLimit = document.getElementById('tmux-history-limit');
+  if (tmuxHistoryLimit) {
+    tmuxHistoryLimit.addEventListener('input', () => {
+      tmuxAnswers.historyLimit = parseInt(tmuxHistoryLimit.value, 10);
+      document.getElementById('tmux-history-limit-val').textContent = tmuxHistoryLimit.value;
+    });
+  }
+
+  const tmuxStatusLeftLength = document.getElementById('tmux-status-left-length');
+  if (tmuxStatusLeftLength) {
+    tmuxStatusLeftLength.addEventListener('input', () => {
+      tmuxAnswers.statusLeftLength = parseInt(tmuxStatusLeftLength.value, 10);
+      document.getElementById('tmux-status-left-length-val').textContent = tmuxStatusLeftLength.value;
+    });
+  }
+
+  const tmuxStatusRightLength = document.getElementById('tmux-status-right-length');
+  if (tmuxStatusRightLength) {
+    tmuxStatusRightLength.addEventListener('input', () => {
+      tmuxAnswers.statusRightLength = parseInt(tmuxStatusRightLength.value, 10);
+      document.getElementById('tmux-status-right-length-val').textContent = tmuxStatusRightLength.value;
+    });
+  }
+
+  const tmuxStatusJustify = document.getElementById('tmux-status-justify');
+  if (tmuxStatusJustify) {
+    tmuxStatusJustify.addEventListener('change', () => {
+      tmuxAnswers.statusJustify = tmuxStatusJustify.value;
     });
   }
 }
@@ -963,8 +1020,19 @@ function generateTmuxConfig() {
   if (tmuxAnswers.renumber) {
     lines.push('set -g renumber-windows on');
   }
+  if (!tmuxAnswers.autoRename) {
+    lines.push('setw -g automatic-rename off');
+    lines.push('setw -g allow-rename off');
+  }
+  if (tmuxAnswers.visualBell) {
+    lines.push('set -g visual-activity off');
+    lines.push('set -g visual-bell off');
+    lines.push('set -g visual-silence off');
+    lines.push('setw -g monitor-activity off');
+    lines.push('set -g bell-action none');
+  }
   lines.push('set -g escape-time 10');
-  lines.push('set -g history-limit 10000');
+  lines.push(`set -g history-limit ${tmuxAnswers.historyLimit}`);
   lines.push('');
 
   // Colors
@@ -994,6 +1062,9 @@ function generateTmuxConfig() {
   lines.push('# Status bar');
   lines.push(`set -g status-position ${tmuxAnswers.statusPosition || 'bottom'}`);
   lines.push(`set -g status-interval ${tmuxAnswers.statusInterval}`);
+  lines.push(`set -g status-justify ${tmuxAnswers.statusJustify}`);
+  lines.push(`set -g status-left-length ${tmuxAnswers.statusLeftLength}`);
+  lines.push(`set -g status-right-length ${tmuxAnswers.statusRightLength}`);
 
   const leftParts = [];
   const rightParts = [];
@@ -1066,6 +1137,23 @@ function generateTmuxConfig() {
       lines.push('setw -g mode-keys vi');
       lines.push('bind -T copy-mode-vi v send-keys -X begin-selection');
       lines.push('bind -T copy-mode-vi y send-keys -X copy-selection-and-cancel');
+    }
+
+    if (extraBindings.includes('swap-panes')) {
+      lines.push('# Swap panes');
+      lines.push('bind { swap-pane -U');
+      lines.push('bind } swap-pane -D');
+    }
+
+    if (extraBindings.includes('synchronize')) {
+      lines.push('# Synchronize panes');
+      lines.push('bind S setw synchronize-panes');
+    }
+
+    if (extraBindings.includes('window-move')) {
+      lines.push('# Window navigation with Shift+arrows');
+      lines.push('bind -n S-Left previous-window');
+      lines.push('bind -n S-Right next-window');
     }
 
     lines.push('');
@@ -1141,5 +1229,10 @@ function downloadTmuxConfig() {
 }
 
 // ── Init ──────────────────────────────────────────────
+// Hide all tool-specific steps initially
+document.querySelectorAll('.starship-step, .tmux-step').forEach(s => {
+  s.style.display = 'none';
+});
+
 renderProgress();
 setupOptions();
