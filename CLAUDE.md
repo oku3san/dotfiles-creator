@@ -1,88 +1,88 @@
 # CLAUDE.md
 
-## Project Overview
+## プロジェクト概要
 
-**dotfiles-creator** is a **Starship Config Generator** — a client-side single-page web application that helps users create customized [Starship](https://starship.rs) shell prompt configurations through a guided wizard interface. The UI is in Japanese.
+**dotfiles-creator** は **Starship Config Generator** です。[Starship](https://starship.rs) のシェルプロンプト設定を、対話形式のウィザードで生成するクライアントサイドのシングルページWebアプリケーションです。UIは日本語です。
 
-- **Owner:** oku3san
-- **Repository:** [oku3san/dotfiles-creator](https://github.com/oku3san/dotfiles-creator)
+- **オーナー:** oku3san
+- **リポジトリ:** [oku3san/dotfiles-creator](https://github.com/oku3san/dotfiles-creator)
 
-## Repository Structure
+## リポジトリ構成
 
 ```
 dotfiles-creator/
-├── CLAUDE.md       # This file — guidance for AI assistants
-├── .gitignore      # Ignores OS/editor temp files (.DS_Store, Thumbs.db, *.swp)
-├── index.html      # HTML + embedded CSS — full UI for the 5-step wizard
-└── app.js          # Vanilla JavaScript — state, navigation, config generation
+├── CLAUDE.md       # このファイル — AIアシスタント向けガイド
+├── .gitignore      # OS/エディタの一時ファイルを除外 (.DS_Store, Thumbs.db, *.swp)
+├── index.html      # HTML + 埋め込みCSS — 5ステップウィザードのUI全体
+└── app.js          # Vanilla JavaScript — 状態管理、ナビゲーション、設定生成
 ```
 
-There are **no dependencies, no build tools, no package manager, and no framework**. The project is served as plain static files.
+**依存関係、ビルドツール、パッケージマネージャー、フレームワークは一切なし**。静的ファイルとしてそのまま配信されます。
 
-## Technology Stack
+## 技術スタック
 
-- **Language:** Vanilla JavaScript (ES6+), HTML5, CSS3
-- **Frameworks/Libraries:** None
-- **Build system:** None — open `index.html` directly in a browser
-- **Tests:** None configured
-- **Linting:** None configured
+- **言語:** Vanilla JavaScript (ES6+)、HTML5、CSS3
+- **フレームワーク/ライブラリ:** なし
+- **ビルドシステム:** なし — ブラウザで `index.html` を直接開く
+- **テスト:** 未設定
+- **リンター:** 未設定
 
-## Development Setup
+## 開発環境セットアップ
 
-No installation is needed. To run locally:
+インストール不要。ローカルで実行するには：
 
-1. Open `index.html` in a web browser
+1. `index.html` をブラウザで開く
 
-There are no dependencies to install, no environment variables, and no build step.
+依存関係のインストール、環境変数、ビルドステップは不要です。
 
-## How the App Works
+## アプリの動作
 
-The wizard walks users through 5 steps:
+ウィザードは5つのステップでユーザーを案内します：
 
-1. **Step 0 — Prompt style:** Choose layout (plain, nerd font icons, bracketed, multi-line)
-2. **Step 1 — Prompt character:** Choose cursor symbol (❯, $, ➜, λ)
-3. **Step 2 — Accent color:** Choose from 8 preset colors (cyan, green, blue, purple, yellow, red, white, orange)
-4. **Step 3 — Modules:** Select which Starship modules to enable (multi-select)
-5. **Step 4 — Result:** View generated TOML config, preview prompt appearance, copy or download
+1. **Step 0 — プロンプトスタイル:** レイアウトを選択（plain、nerd font icons、bracketed、multi-line）
+2. **Step 1 — プロンプト記号:** カーソル記号を選択（❯、$、➜、λ）
+3. **Step 2 — アクセントカラー:** 8色のプリセットから選択（cyan、green、blue、purple、yellow、red、white、orange）
+4. **Step 3 — モジュール:** 有効にする Starship モジュールを選択（複数選択可）
+5. **Step 4 — 生成結果:** 生成された TOML 設定を表示、プロンプトのプレビュー、コピーまたはダウンロード
 
-### Supported Starship Modules
+### 対応 Starship モジュール
 
-Git, Node.js, Python, Go, Rust, Docker, AWS, Kubernetes, Terraform, Time, Battery, Command Duration
+Git、Node.js、Python、Go、Rust、Docker、AWS、Kubernetes、Terraform、Time、Battery、Command Duration
 
-## Key Code Architecture
+## コードアーキテクチャ
 
-### `app.js` (421 lines)
+### `app.js`（421行）
 
-| Section | Functions | Purpose |
+| セクション | 関数 | 役割 |
 |---|---|---|
-| State | `answers`, `TOTAL_STEPS` | Tracks user selections (style, character, color, modules) |
-| Progress bar | `renderProgress()` | Draws the step indicator bar |
-| Navigation | `showStep()`, `nextStep()`, `prevStep()`, `goToStart()` | Moves between wizard steps |
-| Input handlers | `setupOptions()`, `updateNextButton()` | Handles radio, checkbox, and color swatch clicks |
-| Config generation | `generateConfig()`, `buildFormatParts()`, `addModuleVars()` | Builds Starship TOML output from selections |
-| Preview | `buildPromptPreview()` | Creates an HTML preview of the prompt |
-| Result | `renderResult()`, `copyConfig()`, `downloadConfig()` | Displays output, clipboard copy, file download |
+| 状態管理 | `answers`, `TOTAL_STEPS` | ユーザーの選択を保持（style, character, color, modules） |
+| プログレスバー | `renderProgress()` | ステップインジケーターを描画 |
+| ナビゲーション | `showStep()`, `nextStep()`, `prevStep()`, `goToStart()` | ウィザードのステップ間を移動 |
+| 入力ハンドラ | `setupOptions()`, `updateNextButton()` | ラジオボタン、チェックボックス、カラースウォッチのクリック処理 |
+| 設定生成 | `generateConfig()`, `buildFormatParts()`, `addModuleVars()` | 選択内容から Starship TOML を生成 |
+| プレビュー | `buildPromptPreview()` | プロンプトの HTML プレビューを作成 |
+| 結果表示 | `renderResult()`, `copyConfig()`, `downloadConfig()` | 出力表示、クリップボードコピー、ファイルダウンロード |
 
-### `index.html` (510 lines)
+### `index.html`（510行）
 
-Contains all HTML structure and embedded CSS. Uses CSS custom properties for theming (dark mode with GitHub-inspired palette). Key CSS variables are defined in `:root` (e.g., `--bg`, `--surface`, `--accent`).
+HTML構造と埋め込みCSSをすべて含みます。CSSカスタムプロパティによるテーマ設定（GitHub風ダークモード）を使用。主なCSS変数は `:root` で定義されています（例: `--bg`, `--surface`, `--accent`）。
 
-## Coding Conventions
+## コーディング規約
 
-- Keep changes minimal and focused on the task at hand
-- Do not add unnecessary abstractions or over-engineer solutions
-- Write clear commit messages that explain the "why" not just the "what"
-- Prefer simple, readable code over clever code
-- Code uses section dividers with `// ── Title ──` comment style in `app.js`
-- No external dependencies — keep it vanilla JS with no frameworks
-- UI text is in Japanese; comments and code identifiers are in English
-- Update this CLAUDE.md file when adding new files, tooling, or changing project structure
+- 変更は最小限にし、タスクに集中する
+- 不要な抽象化や過剰な設計を避ける
+- コミットメッセージは「何を」ではなく「なぜ」を説明する
+- 巧妙なコードより読みやすいコードを優先する
+- `app.js` では `// ── タイトル ──` スタイルのセクション区切りコメントを使用
+- 外部依存なし — フレームワークを導入せず Vanilla JS を維持する
+- UIテキストは日本語、コメントとコード識別子は英語
+- ファイル追加、ツール導入、プロジェクト構成変更時にこの CLAUDE.md を更新する
 
-## AI Assistant Guidelines
+## AIアシスタント向けガイドライン
 
-- **Read before editing:** Always read files before proposing changes
-- **Stay in scope:** Only make changes that are directly requested or clearly necessary
-- **Validate in browser:** Since there are no tests, manually verify changes render correctly if possible
-- **Update docs:** If you add files, tooling, or change the project structure, update this file
-- **Branch workflow:** Develop on feature branches, not directly on `main`
-- **Keep it simple:** This project intentionally has zero dependencies — avoid introducing build tools or frameworks unless explicitly requested
+- **編集前に読む:** 変更を提案する前に必ずファイルを読む
+- **スコープ内に留まる:** 直接依頼されたか、明らかに必要な変更のみ行う
+- **ブラウザで検証:** テストがないため、変更が正しく表示されることを可能な限り手動で確認する
+- **ドキュメント更新:** ファイル追加、ツール導入、プロジェクト構成変更時にこのファイルを更新する
+- **ブランチワークフロー:** `main` に直接コミットせず、フィーチャーブランチで開発する
+- **シンプルに保つ:** このプロジェクトは意図的に依存関係ゼロ — 明示的に要求されない限りビルドツールやフレームワークを導入しない
