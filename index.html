@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Starship Config Generator</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --accent: #dd6620;
+      --accent-hover: #e8853a;
+      --green: #3fb950;
+      --blue: #58a6ff;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      text-align: center;
+      padding: 2rem 1rem 1rem;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    header h1 span {
+      color: var(--accent);
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 720px;
+      padding: 0 1rem 2rem;
+    }
+
+    /* Progress bar */
+    .progress {
+      display: flex;
+      gap: 0.5rem;
+      margin: 1.5rem 0;
+    }
+
+    .progress-step {
+      flex: 1;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border);
+      transition: background 0.3s;
+    }
+
+    .progress-step.active {
+      background: var(--accent);
+    }
+
+    .progress-step.done {
+      background: var(--green);
+    }
+
+    /* Step card */
+    .step {
+      display: none;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .step.visible {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .step h2 {
+      font-size: 1.25rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .step .description {
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      margin-bottom: 1.25rem;
+    }
+
+    /* Option cards */
+    .options {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .option {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.875rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .option:hover {
+      border-color: var(--accent);
+      background: rgba(221, 102, 32, 0.05);
+    }
+
+    .option.selected {
+      border-color: var(--accent);
+      background: rgba(221, 102, 32, 0.1);
+    }
+
+    .option-radio {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.2s;
+    }
+
+    .option.selected .option-radio {
+      border-color: var(--accent);
+    }
+
+    .option.selected .option-radio::after {
+      content: '';
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    /* Checkbox variant */
+    .option-check {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      border: 2px solid var(--border);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.2s, background 0.2s;
+      font-size: 0.7rem;
+    }
+
+    .option.selected .option-check {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .option-label {
+      font-size: 0.95rem;
+    }
+
+    .option-label small {
+      display: block;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      margin-top: 2px;
+    }
+
+    /* Color input */
+    .color-options {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+      gap: 0.5rem;
+    }
+
+    .color-swatch {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .color-swatch:hover {
+      transform: scale(1.1);
+    }
+
+    .color-swatch.selected {
+      border-color: #fff;
+      transform: scale(1.1);
+    }
+
+    /* Navigation */
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 1.5rem;
+    }
+
+    button {
+      padding: 0.6rem 1.5rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    button:hover {
+      border-color: var(--text-muted);
+    }
+
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    button.primary:hover {
+      background: var(--accent-hover);
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* Result step */
+    .result-area {
+      position: relative;
+    }
+
+    .config-preview {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 0.85rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      overflow-x: auto;
+      max-height: 480px;
+      overflow-y: auto;
+      color: var(--text);
+    }
+
+    .result-actions {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .result-actions button {
+      flex: 1;
+      min-width: 140px;
+    }
+
+    .copy-toast {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--green);
+      color: #fff;
+      padding: 0.5rem 1.25rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+
+    .copy-toast.show {
+      opacity: 1;
+    }
+
+    /* Prompt preview */
+    .prompt-preview {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 0.95rem;
+      margin-bottom: 1rem;
+      line-height: 1.8;
+    }
+
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
+    footer a {
+      color: var(--blue);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1><span>Starship</span> Config Generator</h1>
+    <p>対話形式で starship.toml を生成します</p>
+  </header>
+
+  <div class="container">
+    <div class="progress" id="progress"></div>
+
+    <!-- Step 1: Prompt style -->
+    <div class="step visible" id="step-0">
+      <h2>プロンプトのスタイル</h2>
+      <p class="description">ベースとなるプロンプトレイアウトを選んでください</p>
+      <div class="options" data-key="style" data-type="radio">
+        <div class="option" data-value="plain">
+          <div class="option-radio"></div>
+          <div class="option-label">Plain<small>シンプルな1行プロンプト</small></div>
+        </div>
+        <div class="option" data-value="nerd">
+          <div class="option-radio"></div>
+          <div class="option-label">Nerd Font Icons<small>アイコン付きのリッチなプロンプト</small></div>
+        </div>
+        <div class="option" data-value="bracket">
+          <div class="option-radio"></div>
+          <div class="option-label">Bracketed<small>[角括弧] で囲むスタイル</small></div>
+        </div>
+        <div class="option" data-value="multiline">
+          <div class="option-radio"></div>
+          <div class="option-label">Multi-line<small>情報を上段、入力を下段に分離</small></div>
+        </div>
+      </div>
+      <div class="nav">
+        <div></div>
+        <button class="primary" onclick="nextStep()" id="btn-next-0" disabled>次へ</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Prompt character -->
+    <div class="step" id="step-1">
+      <h2>プロンプト記号</h2>
+      <p class="description">入力カーソルの前に表示される記号を選んでください</p>
+      <div class="options" data-key="character" data-type="radio">
+        <div class="option" data-value="❯">
+          <div class="option-radio"></div>
+          <div class="option-label">❯<small>デフォルト (prezto 風)</small></div>
+        </div>
+        <div class="option" data-value="$">
+          <div class="option-radio"></div>
+          <div class="option-label">$<small>クラシック</small></div>
+        </div>
+        <div class="option" data-value="➜">
+          <div class="option-radio"></div>
+          <div class="option-label">➜<small>アロー</small></div>
+        </div>
+        <div class="option" data-value="λ">
+          <div class="option-radio"></div>
+          <div class="option-label">λ<small>ラムダ</small></div>
+        </div>
+      </div>
+      <div class="nav">
+        <button onclick="prevStep()">戻る</button>
+        <button class="primary" onclick="nextStep()" id="btn-next-1" disabled>次へ</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Accent color -->
+    <div class="step" id="step-2">
+      <h2>アクセントカラー</h2>
+      <p class="description">ディレクトリ名やプロンプト記号の色を選んでください</p>
+      <div class="color-options" data-key="color" data-type="color">
+        <div class="color-swatch" data-value="cyan" style="background:#56d4dd" title="cyan"></div>
+        <div class="color-swatch" data-value="green" style="background:#3fb950" title="green"></div>
+        <div class="color-swatch" data-value="blue" style="background:#58a6ff" title="blue"></div>
+        <div class="color-swatch" data-value="purple" style="background:#bc8cff" title="purple"></div>
+        <div class="color-swatch" data-value="yellow" style="background:#d29922" title="yellow"></div>
+        <div class="color-swatch" data-value="red" style="background:#f85149" title="red"></div>
+        <div class="color-swatch" data-value="white" style="background:#e6edf3" title="white"></div>
+        <div class="color-swatch" data-value="#dd6620" style="background:#dd6620" title="orange"></div>
+      </div>
+      <div class="nav">
+        <button onclick="prevStep()">戻る</button>
+        <button class="primary" onclick="nextStep()" id="btn-next-2" disabled>次へ</button>
+      </div>
+    </div>
+
+    <!-- Step 4: Modules -->
+    <div class="step" id="step-3">
+      <h2>有効にするモジュール</h2>
+      <p class="description">プロンプトに表示したい情報を選んでください（複数選択可）</p>
+      <div class="options" data-key="modules" data-type="checkbox">
+        <div class="option" data-value="git">
+          <div class="option-check"></div>
+          <div class="option-label">Git (branch / status)<small>ブランチ名と変更状態を表示</small></div>
+        </div>
+        <div class="option" data-value="node">
+          <div class="option-check"></div>
+          <div class="option-label">Node.js<small>Node.js のバージョンを表示</small></div>
+        </div>
+        <div class="option" data-value="python">
+          <div class="option-check"></div>
+          <div class="option-label">Python<small>Python のバージョンと仮想環境を表示</small></div>
+        </div>
+        <div class="option" data-value="golang">
+          <div class="option-check"></div>
+          <div class="option-label">Go<small>Go のバージョンを表示</small></div>
+        </div>
+        <div class="option" data-value="rust">
+          <div class="option-check"></div>
+          <div class="option-label">Rust<small>Rust のバージョンを表示</small></div>
+        </div>
+        <div class="option" data-value="docker">
+          <div class="option-check"></div>
+          <div class="option-label">Docker<small>Docker コンテキストを表示</small></div>
+        </div>
+        <div class="option" data-value="aws">
+          <div class="option-check"></div>
+          <div class="option-label">AWS<small>AWS プロファイル/リージョンを表示</small></div>
+        </div>
+        <div class="option" data-value="kubernetes">
+          <div class="option-check"></div>
+          <div class="option-label">Kubernetes<small>現在の context / namespace を表示</small></div>
+        </div>
+        <div class="option" data-value="terraform">
+          <div class="option-check"></div>
+          <div class="option-label">Terraform<small>workspace を表示</small></div>
+        </div>
+        <div class="option" data-value="time">
+          <div class="option-check"></div>
+          <div class="option-label">時刻<small>現在時刻を表示</small></div>
+        </div>
+        <div class="option" data-value="battery">
+          <div class="option-check"></div>
+          <div class="option-label">バッテリー<small>バッテリー残量を表示</small></div>
+        </div>
+        <div class="option" data-value="cmd_duration">
+          <div class="option-check"></div>
+          <div class="option-label">コマンド実行時間<small>長いコマンドの実行時間を表示</small></div>
+        </div>
+      </div>
+      <div class="nav">
+        <button onclick="prevStep()">戻る</button>
+        <button class="primary" onclick="nextStep()" id="btn-next-3">生成する</button>
+      </div>
+    </div>
+
+    <!-- Step 5: Result -->
+    <div class="step" id="step-4">
+      <h2>生成結果</h2>
+      <p class="description">以下の設定を <code>~/.config/starship.toml</code> に保存してください</p>
+      <div class="prompt-preview" id="prompt-preview"></div>
+      <div class="result-area">
+        <div class="config-preview" id="config-output"></div>
+      </div>
+      <div class="result-actions">
+        <button class="primary" onclick="copyConfig()">クリップボードにコピー</button>
+        <button onclick="downloadConfig()">starship.toml をダウンロード</button>
+        <button onclick="goToStart()">最初からやり直す</button>
+      </div>
+      <div class="nav" style="margin-top:1rem">
+        <button onclick="prevStep()">戻って編集</button>
+        <div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="copy-toast" id="toast">コピーしました</div>
+
+  <footer>
+    <p>
+      Powered by <a href="https://starship.rs" target="_blank" rel="noopener">Starship</a>
+      &mdash; prezto からの移行を応援します
+    </p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
