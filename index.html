@@ -592,6 +592,99 @@
     .config-preview .token-boolean { color: #ff7b72; }
     .config-preview .token-number { color: #d29922; }
 
+    /* Neovim preview */
+    .nvim-preview {
+      background: #1e1e2e;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0;
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 0.8rem;
+      margin-bottom: 1rem;
+      overflow: hidden;
+      line-height: 1.5;
+    }
+
+    .nvim-preview-titlebar {
+      background: #181825;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.7rem;
+      color: #6c7086;
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid #313244;
+    }
+
+    .nvim-preview-body {
+      display: flex;
+      min-height: 200px;
+    }
+
+    .nvim-preview-sidebar {
+      width: 160px;
+      background: #181825;
+      border-right: 1px solid #313244;
+      padding: 0.5rem 0;
+      flex-shrink: 0;
+      font-size: 0.75rem;
+      overflow: hidden;
+    }
+
+    .nvim-preview-sidebar-title {
+      padding: 0.125rem 0.5rem;
+      font-weight: bold;
+      margin-bottom: 0.25rem;
+    }
+
+    .nvim-preview-sidebar-item {
+      padding: 0.075rem 0.5rem 0.075rem 1rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .nvim-preview-sidebar-item.active {
+      font-weight: bold;
+    }
+
+    .nvim-preview-editor {
+      flex: 1;
+      padding: 0.5rem 0;
+      overflow: hidden;
+    }
+
+    .nvim-preview-line {
+      display: flex;
+      white-space: pre;
+    }
+
+    .nvim-preview-linenum {
+      width: 3rem;
+      text-align: right;
+      padding-right: 0.75rem;
+      flex-shrink: 0;
+      user-select: none;
+    }
+
+    .nvim-preview-linecontent {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .nvim-preview-statusline {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.15rem 0.75rem;
+      font-size: 0.75rem;
+      border-top: 1px solid #313244;
+    }
+
+    .nvim-preview-cmdline {
+      padding: 0.15rem 0.75rem;
+      font-size: 0.75rem;
+      border-top: 1px solid #313244;
+    }
+
     /* tmux preview */
     .tmux-preview {
       background: #000;
@@ -699,6 +792,10 @@
         <div class="option" data-value="zsh">
           <div class="option-radio"></div>
           <div class="option-label">zsh<small>Zシェルの設定 (.zshrc)</small></div>
+        </div>
+        <div class="option" data-value="neovim">
+          <div class="option-radio"></div>
+          <div class="option-label">Neovim<small>テキストエディタの設定 (init.lua)</small></div>
         </div>
       </div>
       <div class="nav">
@@ -1549,14 +1646,369 @@
     </div>
   </div>
 
+    <!-- Neovim Steps -->
+    <!-- Neovim Step 0: Plugin Manager -->
+    <div class="step neovim-step" id="neovim-step-0">
+      <h2>プラグインマネージャー</h2>
+      <p class="description">Neovim のプラグイン管理をどのように行いますか？</p>
+      <div class="options" data-key="neovim-plugin-manager" data-type="radio">
+        <div class="option" data-value="lazy">
+          <div class="option-radio"></div>
+          <div class="option-label">lazy.nvim<small>モダンで高速なプラグインマネージャー（推奨）</small></div>
+        </div>
+        <div class="option" data-value="packer">
+          <div class="option-radio"></div>
+          <div class="option-label">packer.nvim<small>Lua ベースの定番プラグインマネージャー</small></div>
+        </div>
+        <div class="option" data-value="none">
+          <div class="option-radio"></div>
+          <div class="option-label">なし<small>プラグインなしの基本設定のみ</small></div>
+        </div>
+      </div>
+      <div class="nav">
+        <button onclick="goBackToToolSelection()">ツール選択に戻る</button>
+        <button class="primary" onclick="nextStep()" id="btn-neovim-next-0" disabled>次へ</button>
+      </div>
+    </div>
+
+    <!-- Neovim Step 1: Basic Settings -->
+    <div class="step neovim-step" id="neovim-step-1">
+      <h2>基本設定</h2>
+      <p class="description">Neovim の基本的な動作を設定します</p>
+      <div class="detail-section">
+        <h3>表示設定</h3>
+        <div class="detail-row">
+          <label for="nvim-number">行番号を表示</label>
+          <div class="detail-control">
+            <label class="toggle">
+              <input type="checkbox" id="nvim-number" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="detail-row">
+          <label for="nvim-relativenumber">相対行番号を表示</label>
+          <div class="detail-control">
+            <label class="toggle">
+              <input type="checkbox" id="nvim-relativenumber" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="detail-row">
+          <label for="nvim-cursorline">カーソル行をハイライト</label>
+          <div class="detail-control">
+            <label class="toggle">
+              <input type="checkbox" id="nvim-cursorline" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="detail-row">
+          <label for="nvim-signcolumn">サインカラムを常時表示</label>
+          <div class="detail-control">
+            <label class="toggle">
+              <input type="checkbox" id="nvim-signcolumn" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="detail-row">
+          <label for="nvim-wrap">行の折り返し</label>
+          <div class="detail-control">
+            <label class="toggle">
+              <input type="checkbox" id="nvim-wrap">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="detail-row">
+          <label for="nvim-termguicolors">True Color を有効化</label>
+          <div class="detail-control">
+            <label class="toggle">
+              <input type="checkbox" id="nvim-termguicolors" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="detail-row">
+          <label for="nvim-scrolloff">スクロールオフセット</label>
+          <div class="detail-control">
+            <input type="range" id="nvim-scrolloff" min="0" max="20" value="8">
+            <span id="nvim-scrolloff-val">8</span>
+          </div>
+        </div>
+      </div>
+      <div class="detail-section">
+        <h3>インデント設定</h3>
+        <div class="detail-row">
+          <label for="nvim-tabwidth">タブ幅</label>
+          <div class="detail-control">
+            <input type="range" id="nvim-tabwidth" min="2" max="8" step="2" value="2">
+            <span id="nvim-tabwidth-val">2</span>
+          </div>
+        </div>
+        <div class="detail-row">
+          <label for="nvim-expandtab">タブをスペースに変換</label>
+          <div class="detail-control">
+            <label class="toggle">
+              <input type="checkbox" id="nvim-expandtab" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="detail-row">
+          <label for="nvim-smartindent">スマートインデント</label>
+          <div class="detail-control">
+            <label class="toggle">
+              <input type="checkbox" id="nvim-smartindent" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="detail-section">
+        <h3>検索設定</h3>
+        <div class="detail-row">
+          <label for="nvim-ignorecase">大文字小文字を無視</label>
+          <div class="detail-control">
+            <label class="toggle">
+              <input type="checkbox" id="nvim-ignorecase" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="detail-row">
+          <label for="nvim-smartcase">大文字入力時は区別</label>
+          <div class="detail-control">
+            <label class="toggle">
+              <input type="checkbox" id="nvim-smartcase" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="detail-row">
+          <label for="nvim-hlsearch">検索結果をハイライト</label>
+          <div class="detail-control">
+            <label class="toggle">
+              <input type="checkbox" id="nvim-hlsearch" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="detail-section">
+        <h3>その他</h3>
+        <div class="detail-row">
+          <label for="nvim-clipboard">システムクリップボード連携</label>
+          <div class="detail-control">
+            <label class="toggle">
+              <input type="checkbox" id="nvim-clipboard" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="detail-row">
+          <label for="nvim-mouse">マウス操作を有効化</label>
+          <div class="detail-control">
+            <label class="toggle">
+              <input type="checkbox" id="nvim-mouse" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="detail-row">
+          <label for="nvim-swapfile">スワップファイルを無効化</label>
+          <div class="detail-control">
+            <label class="toggle">
+              <input type="checkbox" id="nvim-swapfile" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="detail-row">
+          <label for="nvim-undofile">永続的なアンドゥ</label>
+          <div class="detail-control">
+            <label class="toggle">
+              <input type="checkbox" id="nvim-undofile" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="detail-row">
+          <label for="nvim-splitright">新しい分割を右に開く</label>
+          <div class="detail-control">
+            <label class="toggle">
+              <input type="checkbox" id="nvim-splitright" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="detail-row">
+          <label for="nvim-splitbelow">新しい分割を下に開く</label>
+          <div class="detail-control">
+            <label class="toggle">
+              <input type="checkbox" id="nvim-splitbelow" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="nav">
+        <button onclick="prevStep()">戻る</button>
+        <button class="primary" onclick="nextStep()" id="btn-neovim-next-1">次へ</button>
+      </div>
+    </div>
+
+    <!-- Neovim Step 2: Colorscheme & Plugins -->
+    <div class="step neovim-step" id="neovim-step-2">
+      <h2>カラースキーム・プラグイン</h2>
+      <p class="description">カラースキームとプラグインを選択してください</p>
+      <div class="detail-section">
+        <h3>カラースキーム</h3>
+        <div class="options" data-key="neovim-colorscheme" data-type="radio">
+          <div class="option" data-value="catppuccin">
+            <div class="option-radio"></div>
+            <div class="option-label">Catppuccin<small>パステル調の柔らかいテーマ</small></div>
+          </div>
+          <div class="option" data-value="tokyonight">
+            <div class="option-radio"></div>
+            <div class="option-label">Tokyo Night<small>青紫系のモダンなテーマ</small></div>
+          </div>
+          <div class="option" data-value="gruvbox">
+            <div class="option-radio"></div>
+            <div class="option-label">Gruvbox<small>レトロな暖色系テーマ</small></div>
+          </div>
+          <div class="option" data-value="nord">
+            <div class="option-radio"></div>
+            <div class="option-label">Nord<small>青系の落ち着いたテーマ</small></div>
+          </div>
+          <div class="option" data-value="dracula">
+            <div class="option-radio"></div>
+            <div class="option-label">Dracula<small>紫系のダークテーマ</small></div>
+          </div>
+          <div class="option" data-value="onedark">
+            <div class="option-radio"></div>
+            <div class="option-label">One Dark<small>Atom エディタ風のテーマ</small></div>
+          </div>
+          <div class="option" data-value="rose-pine">
+            <div class="option-radio"></div>
+            <div class="option-label">Rosé Pine<small>落ち着いたトーンのテーマ</small></div>
+          </div>
+          <div class="option" data-value="kanagawa">
+            <div class="option-radio"></div>
+            <div class="option-label">Kanagawa<small>葛飾北斎の色彩にインスピレーション</small></div>
+          </div>
+        </div>
+      </div>
+      <div id="neovim-plugins-container"></div>
+      <div class="nav">
+        <button onclick="prevStep()">戻る</button>
+        <button class="primary" onclick="nextStep()" id="btn-neovim-next-2" disabled>次へ</button>
+      </div>
+    </div>
+
+    <!-- Neovim Step 3: Keymaps -->
+    <div class="step neovim-step" id="neovim-step-3">
+      <h2>キーマップ</h2>
+      <p class="description">キーマップの設定をカスタマイズします</p>
+      <div class="detail-section">
+        <h3>リーダーキー</h3>
+        <div class="options" data-key="neovim-leader" data-type="radio">
+          <div class="option" data-value="space">
+            <div class="option-radio"></div>
+            <div class="option-label">Space<small>最も人気の選択肢（推奨）</small></div>
+          </div>
+          <div class="option" data-value="comma">
+            <div class="option-radio"></div>
+            <div class="option-label">, (カンマ)<small>クラシックなスタイル</small></div>
+          </div>
+          <div class="option" data-value="backslash">
+            <div class="option-radio"></div>
+            <div class="option-label">\ (バックスラッシュ)<small>Vim デフォルト</small></div>
+          </div>
+        </div>
+      </div>
+      <div class="detail-section">
+        <h3>キーマップ</h3>
+        <div class="bulk-actions">
+          <button class="bulk-btn" onclick="bulkSelect('neovim-keymaps', true)">すべて選択</button>
+          <button class="bulk-btn" onclick="bulkSelect('neovim-keymaps', false)">すべて解除</button>
+        </div>
+        <div class="options" data-key="neovim-keymaps" data-type="checkbox">
+          <div class="option" data-value="window-nav">
+            <div class="option-check"></div>
+            <div class="option-label">ウィンドウ移動<small>Ctrl+h/j/k/l でウィンドウ間を移動</small></div>
+          </div>
+          <div class="option" data-value="buffer-nav">
+            <div class="option-check"></div>
+            <div class="option-label">バッファ移動<small>Shift+h/l で前後のバッファに移動</small></div>
+          </div>
+          <div class="option" data-value="move-lines">
+            <div class="option-check"></div>
+            <div class="option-label">行の移動<small>Alt+j/k で行を上下に移動</small></div>
+          </div>
+          <div class="option" data-value="clear-search">
+            <div class="option-check"></div>
+            <div class="option-label">検索ハイライト解除<small>Esc で検索ハイライトをクリア</small></div>
+          </div>
+          <div class="option" data-value="better-indent">
+            <div class="option-check"></div>
+            <div class="option-label">インデント改善<small>ビジュアルモードで &lt;/&gt; 後も選択を維持</small></div>
+          </div>
+          <div class="option" data-value="save-file">
+            <div class="option-check"></div>
+            <div class="option-label">ファイル保存<small>Ctrl+s でファイルを保存</small></div>
+          </div>
+          <div class="option" data-value="quit">
+            <div class="option-check"></div>
+            <div class="option-label">終了<small>Leader+q で終了</small></div>
+          </div>
+          <div class="option" data-value="split-window">
+            <div class="option-check"></div>
+            <div class="option-label">画面分割<small>Leader+| / Leader+- で垂直/水平分割</small></div>
+          </div>
+          <div class="option" data-value="diagnostic-nav">
+            <div class="option-check"></div>
+            <div class="option-label">診断ナビゲーション<small>[d / ]d で診断メッセージ間を移動</small></div>
+          </div>
+        </div>
+      </div>
+      <div class="nav">
+        <button onclick="prevStep()">戻る</button>
+        <button class="primary" onclick="nextStep()">生成する</button>
+      </div>
+    </div>
+
+    <!-- Neovim Step 4: Result -->
+    <div class="step neovim-step" id="neovim-step-4">
+      <h2>生成結果</h2>
+      <p class="description">以下の設定を <code>~/.config/nvim/init.lua</code> に保存してください</p>
+      <div class="nvim-preview" id="nvim-preview"></div>
+      <div class="result-area">
+        <div class="config-preview" id="neovim-config-output"></div>
+      </div>
+      <div class="result-actions">
+        <button class="primary" onclick="copyNeovimConfig()">クリップボードにコピー</button>
+        <button onclick="downloadNeovimConfig()">init.lua をダウンロード</button>
+        <button onclick="goToStart()">最初からやり直す</button>
+      </div>
+      <div class="nav" style="margin-top:1rem">
+        <button onclick="prevStep()">戻って編集</button>
+        <div></div>
+      </div>
+    </div>
+  </div>
+
   <div class="keyboard-hint"><kbd>Enter</kbd> 次へ &nbsp; <kbd>Esc</kbd> 戻る</div>
   <div class="copy-toast" id="toast">コピーしました</div>
 
   <footer>
     <p>
       Powered by <a href="https://starship.rs" target="_blank" rel="noopener">Starship</a>,
-      <a href="https://github.com/tmux/tmux/wiki" target="_blank" rel="noopener">tmux</a>
-      &amp; <a href="https://www.zsh.org/" target="_blank" rel="noopener">zsh</a>
+      <a href="https://github.com/tmux/tmux/wiki" target="_blank" rel="noopener">tmux</a>,
+      <a href="https://www.zsh.org/" target="_blank" rel="noopener">zsh</a>
+      &amp; <a href="https://neovim.io/" target="_blank" rel="noopener">Neovim</a>
     </p>
   </footer>
 

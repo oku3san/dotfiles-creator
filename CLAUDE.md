@@ -2,11 +2,11 @@
 
 ## プロジェクト概要
 
-**dotfiles-creator** は **Dotfiles Config Generator** です。[Starship](https://starship.rs) のシェルプロンプト設定、[tmux](https://github.com/tmux/tmux/wiki) のターミナルマルチプレクサ設定、[zsh](https://www.zsh.org/) のシェル設定を、対話形式のウィザードで生成するクライアントサイドのシングルページWebアプリケーションです。UIは日本語です。
+**dotfiles-creator** は **Dotfiles Config Generator** です。[Starship](https://starship.rs) のシェルプロンプト設定、[tmux](https://github.com/tmux/tmux/wiki) のターミナルマルチプレクサ設定、[zsh](https://www.zsh.org/) のシェル設定、[Neovim](https://neovim.io/) のテキストエディタ設定を、対話形式のウィザードで生成するクライアントサイドのシングルページWebアプリケーションです。UIは日本語です。
 
 - **オーナー:** oku3san
 - **リポジトリ:** [oku3san/dotfiles-creator](https://github.com/oku3san/dotfiles-creator)
-- **対応ツール:** Starship、tmux、zsh
+- **対応ツール:** Starship、tmux、zsh、Neovim
 
 ## リポジトリ構成
 
@@ -15,8 +15,8 @@ dotfiles-creator/
 ├── CLAUDE.md       # このファイル — AIアシスタント向けガイド
 ├── README.md       # プロジェクト紹介・使い方ガイド
 ├── .gitignore      # OS/エディタの一時ファイルを除外 (.DS_Store, Thumbs.db, *.swp)
-├── index.html      # HTML + 埋め込みCSS — Starship、tmux、zsh のウィザードUI全体
-└── app.js          # Vanilla JavaScript — 状態管理、ナビゲーション、Starship/tmux/zsh 設定生成
+├── index.html      # HTML + 埋め込みCSS — Starship、tmux、zsh、Neovim のウィザードUI全体
+└── app.js          # Vanilla JavaScript — 状態管理、ナビゲーション、Starship/tmux/zsh/Neovim 設定生成
 ```
 
 **依存関係、ビルドツール、パッケージマネージャー、フレームワークは一切なし**。静的ファイルとしてそのまま配信されます。
@@ -46,6 +46,7 @@ dotfiles-creator/
 1. **Starship:** シェルプロンプトの設定 (starship.toml)
 2. **tmux:** ターミナルマルチプレクサの設定 (.tmux.conf)
 3. **zsh:** Zシェルの設定 (.zshrc)
+4. **Neovim:** テキストエディタの設定 (init.lua)
 
 ### Starship ウィザード（6ステップ）
 
@@ -81,17 +82,30 @@ dotfiles-creator/
 - **Oh My Zsh:** robbyrussell、agnoster、powerlevel10k、bureau テーマ、git、zsh-autosuggestions、zsh-syntax-highlighting、autojump、docker、docker-compose、kubectl、npm、yarn プラグイン
 - **Zinit:** zsh-autosuggestions、zsh-syntax-highlighting、fast-syntax-highlighting、zsh-completions、powerlevel10k プラグイン
 
+### Neovim ウィザード（5ステップ）
+
+1. **ツール選択:** Starship、tmux、zsh、Neovim を選択
+2. **Step 0 — プラグインマネージャー:** lazy.nvim、packer.nvim、なしから選択
+3. **Step 1 — 基本設定:** 表示設定（行番号、相対行番号、カーソルハイライト、サインカラム、折り返し、True Color、スクロールオフセット）、インデント設定（タブ幅、スペース変換、スマートインデント）、検索設定（大文字小文字、ハイライト）、その他（クリップボード、マウス、スワップファイル、永続アンドゥ、分割方向）
+4. **Step 2 — カラースキーム・プラグイン:** カラースキーム選択（Catppuccin / Tokyo Night / Gruvbox / Nord / Dracula / One Dark / Rosé Pine / Kanagawa）、プラグイン選択（treesitter、lspconfig、nvim-cmp、telescope、nvim-tree、lualine、gitsigns、autopairs、Comment、indent-blankline、bufferline、which-key）
+5. **Step 3 — キーマップ:** リーダーキー（Space / カンマ / バックスラッシュ）、ウィンドウ移動、バッファ移動、行移動、検索ハイライト解除、インデント改善、ファイル保存、終了、画面分割、診断ナビゲーション
+6. **Step 4 — 生成結果:** 生成された init.lua を表示、Neovim のシミュレーションプレビュー（選択したテーマ・プラグインを反映）、コピーまたはダウンロード
+
+**対応プラグインマネージャー:**
+- **lazy.nvim:** モダンで高速なプラグインマネージャー（推奨）
+- **packer.nvim:** Lua ベースの定番プラグインマネージャー
+
 ## コードアーキテクチャ
 
-### `app.js`（約1200行）
+### `app.js`（約2000行）
 
 | セクション | 関数 | 役割 |
 |---|---|---|
-| 状態管理 | `selectedTool`, `answers`, `tmuxAnswers`, `zshAnswers`, `TOTAL_STEPS`, `TMUX_TOTAL_STEPS`, `ZSH_TOTAL_STEPS` | 選択されたツールとユーザーの選択を保持 |
-| ツール選択 | `selectTool()`, `goBackToToolSelection()` | Starship / tmux / zsh の選択と切り替え |
+| 状態管理 | `selectedTool`, `answers`, `tmuxAnswers`, `zshAnswers`, `neovimAnswers`, `TOTAL_STEPS`, `TMUX_TOTAL_STEPS`, `ZSH_TOTAL_STEPS`, `NEOVIM_TOTAL_STEPS` | 選択されたツールとユーザーの選択を保持 |
+| ツール選択 | `selectTool()`, `goBackToToolSelection()` | Starship / tmux / zsh / Neovim の選択と切り替え |
 | プログレスバー | `renderProgress()` | ステップインジケーターを描画 |
-| ナビゲーション | `showStep()`, `showTmuxStep()`, `showZshStep()`, `nextStep()`, `prevStep()`, `goToStart()` | ウィザードのステップ間を移動 |
-| 入力ハンドラ | `setupOptions()`, `setupTmuxListeners()`, `setupZshListeners()`, `updateNextButton()`, `updateTmuxNextButton()`, `updateZshNextButton()` | ラジオボタン、チェックボックス、カラースウォッチ、トグルスイッチのクリック処理 |
+| ナビゲーション | `showStep()`, `showTmuxStep()`, `showZshStep()`, `showNeovimStep()`, `nextStep()`, `prevStep()`, `goToStart()` | ウィザードのステップ間を移動 |
+| 入力ハンドラ | `setupOptions()`, `setupTmuxListeners()`, `setupZshListeners()`, `setupNeovimListeners()`, `updateNextButton()`, `updateTmuxNextButton()`, `updateZshNextButton()`, `updateNeovimNextButton()` | ラジオボタン、チェックボックス、カラースウォッチ、トグルスイッチのクリック処理 |
 | Starship 設定生成 | `generateConfig()`, `buildFormatParts()`, `addModuleVars()` | 選択内容から Starship TOML を生成 |
 | Starship プレビュー | `buildPromptPreview()` | プロンプトの HTML プレビューを作成 |
 | Starship 結果表示 | `renderResult()`, `copyConfig()`, `downloadConfig()` | 出力表示、クリップボードコピー、ファイルダウンロード |
@@ -100,16 +114,21 @@ dotfiles-creator/
 | zsh プラグインセクション | `buildZshPluginsSection()` | プラグインマネージャーに応じて動的にプラグイン選択UIを生成 |
 | zsh 設定生成 | `generateZshConfig()` | 選択内容から .zshrc を生成 |
 | zsh 結果表示 | `renderZshResult()`, `copyZshConfig()`, `downloadZshConfig()` | 出力表示、クリップボードコピー、ファイルダウンロード |
+| Neovim プラグインセクション | `buildNeovimPluginsSection()` | プラグインマネージャーに応じて動的にプラグイン選択UIを生成 |
+| Neovim 設定生成 | `generateNeovimConfig()`, `appendLazyPlugins()`, `appendPackerPlugins()`, `appendPluginSetup()` | 選択内容から init.lua を生成 |
+| Neovim プレビュー | `buildNeovimPreview()`, `getNeovimThemeColors()` | Neovim エディタのシミュレーションプレビューを作成 |
+| Neovim 結果表示 | `renderNeovimResult()`, `copyNeovimConfig()`, `downloadNeovimConfig()` | 出力表示、クリップボードコピー、ファイルダウンロード |
 
-### `index.html`（約1400行）
+### `index.html`（約1800行）
 
 HTML構造と埋め込みCSSをすべて含みます。
 
-- **ツール選択画面:** Starship / tmux / zsh を選択
+- **ツール選択画面:** Starship / tmux / zsh / Neovim を選択
 - **Starship ステップ（6ステップ）:** プロンプトスタイル、記号、カラー、モジュール、詳細設定、結果
 - **tmux ステップ（5ステップ）:** 基本設定、カラースキーム、ステータスバー、キーバインド、結果
 - **zsh ステップ（5ステップ）:** プラグイン管理システム、基本設定、プラグイン・テーマ、エイリアス、結果
-- **CSS:** カスタムプロパティによるテーマ設定（GitHub風ダークモード）。主なCSS変数は `:root` で定義（例: `--bg`, `--surface`, `--accent`）
+- **Neovim ステップ（5ステップ）:** プラグインマネージャー、基本設定、カラースキーム・プラグイン、キーマップ、結果（シミュレーションプレビュー付き）
+- **CSS:** カスタムプロパティによるテーマ設定（GitHub風ダークモード）。Neovim プレビュー用のエディタシミュレーション CSS を含む。主なCSS変数は `:root` で定義（例: `--bg`, `--surface`, `--accent`）
 
 ## コーディング規約
 
