@@ -53,14 +53,14 @@ function selectTool() {
   // Hide tool selection
   document.getElementById('step-tool-selection').classList.remove('visible');
 
-  // Show appropriate steps
+  // Show appropriate steps (clear inline styles so CSS classes control visibility)
   if (selectedTool === 'starship') {
-    document.querySelectorAll('.starship-step').forEach(s => s.style.display = 'block');
+    document.querySelectorAll('.starship-step').forEach(s => s.style.display = '');
     document.querySelectorAll('.tmux-step').forEach(s => s.style.display = 'none');
     showStep(0);
   } else if (selectedTool === 'tmux') {
     document.querySelectorAll('.starship-step').forEach(s => s.style.display = 'none');
-    document.querySelectorAll('.tmux-step').forEach(s => s.style.display = 'block');
+    document.querySelectorAll('.tmux-step').forEach(s => s.style.display = '');
     showTmuxStep(0);
   }
 }
@@ -177,6 +177,37 @@ function goToStart() {
   if (customColorInput) customColorInput.value = '#';
   const customColorPreview = document.getElementById('custom-color-preview');
   if (customColorPreview) customColorPreview.style.background = 'transparent';
+
+  // Reset tmux DOM elements
+  const tmuxToggles = {
+    'tmux-mouse': true,
+    'tmux-base-index': true,
+    'tmux-renumber': true,
+    'tmux-auto-rename': false,
+    'tmux-visual-bell': true,
+    'tmux-pane-border': false,
+    'tmux-active-border': true,
+  };
+  for (const [id, defaultVal] of Object.entries(tmuxToggles)) {
+    const el = document.getElementById(id);
+    if (el) el.checked = defaultVal;
+  }
+
+  const tmuxRanges = {
+    'tmux-history-limit': { value: 10000, display: 'tmux-history-limit-val', suffix: '' },
+    'tmux-status-interval': { value: 5, display: 'tmux-status-interval-val', suffix: '秒' },
+    'tmux-status-left-length': { value: 40, display: 'tmux-status-left-length-val', suffix: '' },
+    'tmux-status-right-length': { value: 50, display: 'tmux-status-right-length-val', suffix: '' },
+  };
+  for (const [id, cfg] of Object.entries(tmuxRanges)) {
+    const el = document.getElementById(id);
+    if (el) el.value = cfg.value;
+    const display = document.getElementById(cfg.display);
+    if (display) display.textContent = cfg.value + cfg.suffix;
+  }
+
+  const tmuxJustify = document.getElementById('tmux-status-justify');
+  if (tmuxJustify) tmuxJustify.value = 'centre';
 
   // Go back to tool selection
   goBackToToolSelection();
@@ -969,12 +1000,19 @@ function renderResult() {
 }
 
 // ── Copy / Download ───────────────────────────────────
+function showToast(message) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2000);
+}
+
 function copyConfig() {
   const text = document.getElementById('config-output').textContent;
   navigator.clipboard.writeText(text).then(() => {
-    const toast = document.getElementById('toast');
-    toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), 2000);
+    showToast('コピーしました');
+  }).catch(() => {
+    showToast('コピーに失敗しました');
   });
 }
 
@@ -1025,11 +1063,8 @@ function generateTmuxConfig() {
     lines.push('setw -g allow-rename off');
   }
   if (tmuxAnswers.visualBell) {
-    lines.push('set -g visual-activity off');
-    lines.push('set -g visual-bell off');
-    lines.push('set -g visual-silence off');
-    lines.push('setw -g monitor-activity off');
-    lines.push('set -g bell-action none');
+    lines.push('set -g visual-bell on');
+    lines.push('set -g bell-action any');
   }
   lines.push('set -g escape-time 10');
   lines.push(`set -g history-limit ${tmuxAnswers.historyLimit}`);
@@ -1209,9 +1244,9 @@ function renderTmuxResult() {
 function copyTmuxConfig() {
   const text = document.getElementById('tmux-config-output').textContent;
   navigator.clipboard.writeText(text).then(() => {
-    const toast = document.getElementById('toast');
-    toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), 2000);
+    showToast('コピーしました');
+  }).catch(() => {
+    showToast('コピーに失敗しました');
   });
 }
 
