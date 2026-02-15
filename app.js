@@ -2902,7 +2902,7 @@ function generateNeovimConfig() {
       lines.push('-- Diagnostic navigation');
       lines.push('keymap("n", "[d", vim.diagnostic.goto_prev, { desc = "Previous diagnostic" })');
       lines.push('keymap("n", "]d", vim.diagnostic.goto_next, { desc = "Next diagnostic" })');
-      lines.push('keymap("n", "<leader>e", vim.diagnostic.open_float, { desc = "Show diagnostic" })');
+      lines.push('keymap("n", "<leader>d", vim.diagnostic.open_float, { desc = "Show diagnostic" })');
       lines.push('');
     }
 
