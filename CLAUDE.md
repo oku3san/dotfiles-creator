@@ -48,18 +48,18 @@ dotfiles-creator/
 3. **Step 1 — プロンプト記号:** カーソル記号を選択（❯、$、➜、λ）
 4. **Step 2 — アクセントカラー:** 8色のプリセットから選択（cyan、green、blue、purple、yellow、red、white、orange）
 5. **Step 3 — モジュール:** 有効にする Starship モジュールを選択（複数選択可）
-6. **Step 4 — 詳細設定:** ディレクトリ表示、時刻フォーマット、右プロンプトなどの細かい設定
+6. **Step 4 — 詳細設定:** ディレクトリ表示、Git ブランチ設定、Python 仮想環境、メモリ閾値、時刻フォーマット、右プロンプトなどの細かい設定
 7. **Step 5 — 生成結果:** 生成された TOML 設定を表示、プロンプトのプレビュー、コピーまたはダウンロード
 
-**対応 Starship モジュール:** Git、Node.js、Python、Go、Rust、Docker、AWS、Kubernetes、Terraform、Time、Battery、Command Duration
+**対応 Starship モジュール:** Git、Node.js、Python、Go、Rust、Java、Ruby、PHP、Docker、AWS、Kubernetes、Terraform、Package、Hostname、Username、Jobs、Memory、Time、Battery、Command Duration
 
 ### tmux ウィザード（5ステップ）
 
 1. **ツール選択:** Starship または tmux を選択
-2. **Step 0 — 基本設定:** プレフィックスキー（Ctrl+b / Ctrl+a / Ctrl+Space）、マウス操作、ウィンドウ番号の設定、自動リネーム、ビジュアルベル、ヒストリー行数
-3. **Step 1 — カラースキーム:** テーマ選択（Default / Nord / Dracula / Gruvbox / GitHub Dark）、ペイン境界線の設定
-4. **Step 2 — ステータスバー:** 位置、表示内容（セッション名、ホスト名、日時、CPU負荷）、更新間隔、左右の最大文字数、ウィンドウリストの位置
-5. **Step 3 — キーバインド:** ペイン分割キー、Vim スタイルの操作、設定リロード、Vi モードコピー、ペイン同期、ウィンドウ移動など
+2. **Step 0 — 基本設定:** プレフィックスキー（Ctrl+b / Ctrl+a / Ctrl+Space）、マウス操作、ウィンドウ番号の設定、自動リネーム、ビジュアルベル、ヒストリー行数、ターミナルタイプ、フォーカスイベント、クリップボード連携、アグレッシブリサイズ、タイミング設定
+3. **Step 1 — カラースキーム:** テーマ選択（Default / Nord / Dracula / Gruvbox / GitHub Dark / Tokyo Night / Catppuccin / Solarized Dark）、ペイン境界線の設定
+4. **Step 2 — ステータスバー:** 位置、表示内容（セッション名、ホスト名、日時、CPU負荷、Git ブランチ、バッテリー、稼働時間、ペイン数）、更新間隔、左右の最大文字数、ウィンドウリストの位置
+5. **Step 3 — キーバインド:** ペイン分割キー、Vim スタイルの操作、設定リロード、Vi モードコピー、ペイン同期、ウィンドウ移動、セッション管理、レイアウト切替、ズーム、画面クリアなど。プラグイン設定（tpm、tmux-resurrect、tmux-continuum、tmux-yank、tmux-sensible）
 6. **Step 4 — 生成結果:** 生成された .tmux.conf を表示、コピーまたはダウンロード
 
 ## コードアーキテクチャ

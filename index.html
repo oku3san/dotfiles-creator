@@ -709,6 +709,38 @@
           <div class="option-check"></div>
           <div class="option-label">Terraform<small>workspace を表示</small></div>
         </div>
+        <div class="option" data-value="java">
+          <div class="option-check"></div>
+          <div class="option-label">Java<small>Java のバージョンを表示</small></div>
+        </div>
+        <div class="option" data-value="ruby">
+          <div class="option-check"></div>
+          <div class="option-label">Ruby<small>Ruby のバージョンを表示</small></div>
+        </div>
+        <div class="option" data-value="php">
+          <div class="option-check"></div>
+          <div class="option-label">PHP<small>PHP のバージョンを表示</small></div>
+        </div>
+        <div class="option" data-value="package">
+          <div class="option-check"></div>
+          <div class="option-label">パッケージバージョン<small>package.json 等のバージョンを表示</small></div>
+        </div>
+        <div class="option" data-value="hostname">
+          <div class="option-check"></div>
+          <div class="option-label">ホスト名<small>SSH接続時にホスト名を表示</small></div>
+        </div>
+        <div class="option" data-value="username">
+          <div class="option-check"></div>
+          <div class="option-label">ユーザー名<small>SSH接続時やroot時にユーザー名を表示</small></div>
+        </div>
+        <div class="option" data-value="jobs">
+          <div class="option-check"></div>
+          <div class="option-label">バックグラウンドジョブ<small>実行中のジョブ数を表示</small></div>
+        </div>
+        <div class="option" data-value="memory">
+          <div class="option-check"></div>
+          <div class="option-label">メモリ使用量<small>RAM の使用量を表示</small></div>
+        </div>
         <div class="option" data-value="time">
           <div class="option-check"></div>
           <div class="option-label">時刻<small>現在時刻を表示</small></div>
@@ -838,6 +870,63 @@
           </div>
         </div>
       </div>
+      <div class="detail-section">
+        <h3>ターミナルと入出力</h3>
+        <div class="detail-row">
+          <label for="tmux-terminal-type">ターミナルタイプ</label>
+          <div class="detail-control">
+            <select id="tmux-terminal-type" style="background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem; color: var(--text); font-size: 0.9rem;">
+              <option value="screen-256color" selected>screen-256color</option>
+              <option value="tmux-256color">tmux-256color</option>
+              <option value="xterm-256color">xterm-256color</option>
+            </select>
+          </div>
+        </div>
+        <div class="detail-row">
+          <label for="tmux-focus-events">フォーカスイベントを有効化</label>
+          <div class="detail-control">
+            <label class="toggle">
+              <input type="checkbox" id="tmux-focus-events" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="detail-row">
+          <label for="tmux-clipboard">クリップボード連携</label>
+          <div class="detail-control">
+            <label class="toggle">
+              <input type="checkbox" id="tmux-clipboard" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="detail-row">
+          <label for="tmux-aggressive-resize">アグレッシブリサイズ</label>
+          <div class="detail-control">
+            <label class="toggle">
+              <input type="checkbox" id="tmux-aggressive-resize" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="detail-section">
+        <h3>タイミング</h3>
+        <div class="detail-row">
+          <label for="tmux-display-panes-time">ペイン番号の表示時間</label>
+          <div class="detail-control">
+            <input type="range" id="tmux-display-panes-time" min="500" max="5000" step="500" value="2000">
+            <span id="tmux-display-panes-time-val">2000ms</span>
+          </div>
+        </div>
+        <div class="detail-row">
+          <label for="tmux-repeat-time">キーリピート受付時間</label>
+          <div class="detail-control">
+            <input type="range" id="tmux-repeat-time" min="100" max="2000" step="100" value="500">
+            <span id="tmux-repeat-time-val">500ms</span>
+          </div>
+        </div>
+      </div>
       <div class="nav">
         <button onclick="goBackToToolSelection()">ツール選択に戻る</button>
         <button class="primary" onclick="nextStep()" id="btn-tmux-next-0" disabled>次へ</button>
@@ -870,6 +959,18 @@
           <div class="option" data-value="github">
             <div class="option-radio"></div>
             <div class="option-label">GitHub Dark<small>GitHub 風のダークテーマ</small></div>
+          </div>
+          <div class="option" data-value="tokyonight">
+            <div class="option-radio"></div>
+            <div class="option-label">Tokyo Night<small>青紫系のモダンなテーマ</small></div>
+          </div>
+          <div class="option" data-value="catppuccin">
+            <div class="option-radio"></div>
+            <div class="option-label">Catppuccin<small>パステル調の柔らかいテーマ</small></div>
+          </div>
+          <div class="option" data-value="solarized">
+            <div class="option-radio"></div>
+            <div class="option-label">Solarized Dark<small>Ethan Schoonover のクラシックテーマ</small></div>
           </div>
         </div>
       </div>
@@ -935,6 +1036,22 @@
           <div class="option" data-value="load">
             <div class="option-check"></div>
             <div class="option-label">CPU負荷<small>システム負荷を表示</small></div>
+          </div>
+          <div class="option" data-value="git">
+            <div class="option-check"></div>
+            <div class="option-label">Git ブランチ<small>カレントディレクトリの Git ブランチ名</small></div>
+          </div>
+          <div class="option" data-value="battery">
+            <div class="option-check"></div>
+            <div class="option-label">バッテリー<small>バッテリー残量を表示 (Linux/macOS)</small></div>
+          </div>
+          <div class="option" data-value="uptime">
+            <div class="option-check"></div>
+            <div class="option-label">稼働時間<small>システムの稼働時間を表示</small></div>
+          </div>
+          <div class="option" data-value="pane-count">
+            <div class="option-check"></div>
+            <div class="option-label">ペイン数<small>現在のウィンドウのペイン数</small></div>
           </div>
         </div>
       </div>
@@ -1037,6 +1154,52 @@
           <div class="option" data-value="new-window">
             <div class="option-check"></div>
             <div class="option-label">タブ操作<small>prefix + t で新しいウィンドウ（タブ）を作成</small></div>
+          </div>
+          <div class="option" data-value="session-switch">
+            <div class="option-check"></div>
+            <div class="option-label">セッション管理<small>prefix + ( / ) でセッション切り替え</small></div>
+          </div>
+          <div class="option" data-value="layout-cycle">
+            <div class="option-check"></div>
+            <div class="option-label">レイアウト切替<small>prefix + Space でレイアウトを順次切り替え</small></div>
+          </div>
+          <div class="option" data-value="zoom-pane">
+            <div class="option-check"></div>
+            <div class="option-label">ペインズーム<small>prefix + z でペインを最大化/復元</small></div>
+          </div>
+          <div class="option" data-value="kill-pane">
+            <div class="option-check"></div>
+            <div class="option-label">ペイン/ウィンドウを閉じる<small>prefix + x / X で確認なしにペイン/ウィンドウを閉じる</small></div>
+          </div>
+          <div class="option" data-value="clear-history">
+            <div class="option-check"></div>
+            <div class="option-label">画面クリア<small>prefix + C-l で画面とスクロールバックをクリア</small></div>
+          </div>
+        </div>
+      </div>
+      <div class="detail-section">
+        <h3>プラグイン（tpm）</h3>
+        <p class="detail-description">tmux Plugin Manager (tpm) を使ったプラグイン設定を追加します</p>
+        <div class="options" data-key="tmux-plugins" data-type="checkbox">
+          <div class="option" data-value="tpm">
+            <div class="option-check"></div>
+            <div class="option-label">tpm (プラグインマネージャー)<small>prefix + I でプラグインをインストール</small></div>
+          </div>
+          <div class="option" data-value="resurrect">
+            <div class="option-check"></div>
+            <div class="option-label">tmux-resurrect<small>セッションの保存と復元 (prefix + Ctrl-s/r)</small></div>
+          </div>
+          <div class="option" data-value="continuum">
+            <div class="option-check"></div>
+            <div class="option-label">tmux-continuum<small>セッションの自動保存と自動復元</small></div>
+          </div>
+          <div class="option" data-value="yank">
+            <div class="option-check"></div>
+            <div class="option-label">tmux-yank<small>システムクリップボードへのコピー</small></div>
+          </div>
+          <div class="option" data-value="sensible">
+            <div class="option-check"></div>
+            <div class="option-label">tmux-sensible<small>万人向けの基本設定セット</small></div>
           </div>
         </div>
       </div>
