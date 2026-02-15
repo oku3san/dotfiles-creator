@@ -703,6 +703,60 @@ function updateZshNextButton(stepIndex) {
   }
 }
 
+// ── Bulk select / deselect ────────────────────────────
+function bulkSelect(dataKey, selectAll) {
+  const container = document.querySelector(`.options[data-key="${dataKey}"]`);
+  if (!container) return;
+
+  const values = [];
+  container.querySelectorAll('.option').forEach(option => {
+    if (selectAll) {
+      option.classList.add('selected');
+    } else {
+      option.classList.remove('selected');
+    }
+    if (selectAll) values.push(option.dataset.value);
+  });
+
+  // Update the appropriate state
+  if (dataKey === 'modules') {
+    answers.modules = values;
+  } else if (dataKey.startsWith('tmux-')) {
+    const tmuxKey = dataKey.replace('tmux-', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+    tmuxAnswers[tmuxKey] = values;
+  } else if (dataKey.startsWith('zsh-')) {
+    const zshKey = dataKey.replace('zsh-', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+    zshAnswers[zshKey] = values;
+  }
+}
+
+// ── Starship preset templates ─────────────────────────
+const STARSHIP_PRESETS = {
+  minimal: ['git', 'cmd_duration'],
+  full: ['git', 'node', 'python', 'golang', 'rust', 'docker', 'aws', 'kubernetes', 'java', 'ruby', 'php', 'package', 'hostname', 'username', 'jobs', 'memory', 'time', 'battery', 'cmd_duration', 'terraform'],
+  devops: ['git', 'docker', 'aws', 'kubernetes', 'terraform', 'hostname', 'username', 'cmd_duration'],
+  webdev: ['git', 'node', 'python', 'package', 'docker', 'cmd_duration'],
+};
+
+function applyStarshipPreset(preset) {
+  const modules = STARSHIP_PRESETS[preset];
+  if (!modules) return;
+
+  answers.modules = [...modules];
+
+  // Update the checkbox UI
+  const container = document.querySelector('#step-3 .options[data-key="modules"]');
+  if (!container) return;
+  container.querySelectorAll('.option').forEach(option => {
+    const val = option.dataset.value;
+    if (modules.includes(val)) {
+      option.classList.add('selected');
+    } else {
+      option.classList.remove('selected');
+    }
+  });
+}
+
 // ── Detail settings (Step 4) ──────────────────────────
 function buildDetailSettings() {
   const container = document.getElementById('detail-settings');
@@ -1080,8 +1134,139 @@ function buildZshPluginsSection() {
     container.appendChild(note);
   }
 
-  // Re-attach event listeners for the dynamically generated options
-  setupOptions();
+  // Attach event listeners only for newly generated elements
+  setupDynamicOptions(container);
+}
+
+// ── Syntax highlighting ──────────────────────────────
+function highlightToml(text) {
+  return text.split('\n').map(line => {
+    // Comments
+    if (/^\s*#/.test(line)) {
+      return `<span class="token-comment">${escapeHtml(line)}</span>`;
+    }
+    // Section headers [foo] or [[foo.bar]]
+    if (/^\s*\[{1,2}[^\]]+\]{1,2}\s*$/.test(line)) {
+      return `<span class="token-section">${escapeHtml(line)}</span>`;
+    }
+    // Key = value pairs
+    const kvMatch = line.match(/^(\s*\S+)(\s*=\s*)(.+)$/);
+    if (kvMatch) {
+      const key = `<span class="token-key">${escapeHtml(kvMatch[1])}</span>`;
+      const eq = escapeHtml(kvMatch[2]);
+      const val = highlightValue(kvMatch[3]);
+      return key + eq + val;
+    }
+    return escapeHtml(line);
+  }).join('\n');
+}
+
+function highlightConf(text) {
+  return text.split('\n').map(line => {
+    // Comments
+    if (/^\s*#/.test(line)) {
+      return `<span class="token-comment">${escapeHtml(line)}</span>`;
+    }
+    // Commands like 'set -g key value', 'bind key action'
+    const cmdMatch = line.match(/^(\s*(?:set|setw|bind|unbind|run|source-file)\b)(.*)$/);
+    if (cmdMatch) {
+      const cmd = `<span class="token-key">${escapeHtml(cmdMatch[1])}</span>`;
+      const rest = highlightConfArgs(cmdMatch[2]);
+      return cmd + rest;
+    }
+    return escapeHtml(line);
+  }).join('\n');
+}
+
+function highlightZsh(text) {
+  return text.split('\n').map(line => {
+    // Comments
+    if (/^\s*#/.test(line)) {
+      return `<span class="token-comment">${escapeHtml(line)}</span>`;
+    }
+    // alias x="y"
+    const aliasMatch = line.match(/^(\s*alias\s+)(\S+?)(=)(.+)$/);
+    if (aliasMatch) {
+      return `<span class="token-key">${escapeHtml(aliasMatch[1])}</span><span class="token-section">${escapeHtml(aliasMatch[2])}</span>${escapeHtml(aliasMatch[3])}${highlightValue(aliasMatch[4])}`;
+    }
+    // export VAR=val
+    const exportMatch = line.match(/^(\s*export\s+)(\w+)(=)(.+)$/);
+    if (exportMatch) {
+      return `<span class="token-key">${escapeHtml(exportMatch[1])}</span><span class="token-section">${escapeHtml(exportMatch[2])}</span>${escapeHtml(exportMatch[3])}${highlightValue(exportMatch[4])}`;
+    }
+    // VAR=val
+    const varMatch = line.match(/^(\s*\w+)(=)(.+)$/);
+    if (varMatch) {
+      return `<span class="token-section">${escapeHtml(varMatch[1])}</span>${escapeHtml(varMatch[2])}${highlightValue(varMatch[3])}`;
+    }
+    // Commands: setopt, autoload, compinit, bindkey, source, zstyle, zinit, plugins
+    const cmdMatch = line.match(/^(\s*(?:setopt|autoload|compinit|bindkey|source|zstyle|zinit\s+\w+|plugins)\b)(.*)$/);
+    if (cmdMatch) {
+      return `<span class="token-key">${escapeHtml(cmdMatch[1])}</span>${escapeHtml(cmdMatch[2])}`;
+    }
+    return escapeHtml(line);
+  }).join('\n');
+}
+
+function highlightValue(val) {
+  val = val.trim();
+  // Quoted strings
+  if (/^".*"$/.test(val) || /^'.*'$/.test(val)) {
+    return `<span class="token-string">${escapeHtml(val)}</span>`;
+  }
+  // Booleans
+  if (/^(true|false|on|off|yes|no)$/i.test(val)) {
+    return `<span class="token-boolean">${escapeHtml(val)}</span>`;
+  }
+  // Numbers
+  if (/^-?\d+(\.\d+)?$/.test(val)) {
+    return `<span class="token-number">${escapeHtml(val)}</span>`;
+  }
+  return escapeHtml(val);
+}
+
+function highlightConfArgs(text) {
+  // Highlight quoted strings in tmux conf arguments
+  return escapeHtml(text).replace(/(&quot;[^&]*?&quot;|&#39;[^&]*?&#39;)/g, '<span class="token-string">$1</span>');
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// ── Dynamic option setup (avoids duplicate listeners) ─
+function setupDynamicOptions(root) {
+  root.querySelectorAll('.options[data-type="radio"]').forEach(container => {
+    const key = container.dataset.key;
+    container.querySelectorAll('.option').forEach(option => {
+      option.addEventListener('click', () => {
+        container.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+        option.classList.add('selected');
+        if (key.startsWith('zsh-')) {
+          const zshKey = key.replace('zsh-', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+          zshAnswers[zshKey] = option.dataset.value;
+        }
+      });
+    });
+  });
+
+  root.querySelectorAll('.options[data-type="checkbox"]').forEach(container => {
+    const key = container.dataset.key;
+    container.querySelectorAll('.option').forEach(option => {
+      option.addEventListener('click', () => {
+        option.classList.toggle('selected');
+        const val = option.dataset.value;
+        if (key.startsWith('zsh-')) {
+          const zshKey = key.replace('zsh-', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+          if (option.classList.contains('selected')) {
+            if (!zshAnswers[zshKey].includes(val)) zshAnswers[zshKey].push(val);
+          } else {
+            zshAnswers[zshKey] = zshAnswers[zshKey].filter(v => v !== val);
+          }
+        }
+      });
+    });
+  });
 }
 
 // ── Config generation ─────────────────────────────────
@@ -1589,7 +1774,7 @@ function buildPromptPreview() {
 // ── Result rendering ──────────────────────────────────
 function renderResult() {
   const config = generateConfig();
-  document.getElementById('config-output').textContent = config;
+  document.getElementById('config-output').innerHTML = highlightToml(config);
   const previewHtml = buildPromptPreview();
   document.getElementById('prompt-preview').innerHTML =
     '<div style="color:#8b949e;font-size:0.75rem;margin-bottom:0.5rem">プレビュー (イメージ)</div>' +
@@ -1606,7 +1791,7 @@ function showToast(message) {
 }
 
 function copyConfig() {
-  const text = document.getElementById('config-output').textContent;
+  const text = document.getElementById('config-output').innerText;
   navigator.clipboard.writeText(text).then(() => {
     showToast('コピーしました');
   }).catch(() => {
@@ -1615,7 +1800,7 @@ function copyConfig() {
 }
 
 function downloadConfig() {
-  const text = document.getElementById('config-output').textContent;
+  const text = document.getElementById('config-output').innerText;
   const blob = new Blob([text], { type: 'text/plain' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -1945,14 +2130,58 @@ function getThemeColors(theme) {
   return themes[theme] || themes.github;
 }
 
+// ── tmux status bar preview ───────────────────────────
+function buildTmuxStatusPreview() {
+  const theme = tmuxAnswers.theme;
+  const themeColors = (theme && theme !== 'default') ? getThemeColors(theme) : {
+    statusBg: '#333333', statusFg: '#ffffff', activeBg: '#00ff00', activeFg: '#000000',
+  };
+
+  const leftParts = [];
+  const rightParts = [];
+
+  if (tmuxAnswers.statusModules.includes('session')) leftParts.push('[main]');
+  if (tmuxAnswers.statusModules.includes('pane-count')) leftParts.push('[2P]');
+
+  if (tmuxAnswers.statusModules.includes('git')) rightParts.push('main');
+  if (tmuxAnswers.statusModules.includes('hostname')) rightParts.push('myhost');
+  if (tmuxAnswers.statusModules.includes('battery')) rightParts.push('85%');
+  if (tmuxAnswers.statusModules.includes('datetime')) rightParts.push('2026-02-15 14:30');
+  if (tmuxAnswers.statusModules.includes('load')) rightParts.push('0.42 0.38 0.35');
+  if (tmuxAnswers.statusModules.includes('uptime')) rightParts.push('up 3d 2h');
+
+  const windowHtml = `<span class="tmux-preview-window">1:zsh</span><span class="tmux-preview-window active" style="background:${themeColors.activeBg};color:${themeColors.activeFg};border-radius:2px">2:vim*</span><span class="tmux-preview-window">3:htop</span>`;
+
+  const position = tmuxAnswers.statusPosition || 'bottom';
+  const statusBar = `<div class="tmux-preview-status" style="background:${themeColors.statusBg};color:${themeColors.statusFg}">
+    <span class="tmux-preview-status-left">${leftParts.join(' ')}</span>
+    <span class="tmux-preview-status-center">${windowHtml}</span>
+    <span class="tmux-preview-status-right">${rightParts.join(' | ')}</span>
+  </div>`;
+
+  const preview = document.getElementById('tmux-preview');
+  if (!preview) return;
+
+  const content = preview.querySelector('.tmux-preview-content');
+  const existingStatus = preview.querySelector('.tmux-preview-status');
+  if (existingStatus) existingStatus.remove();
+
+  if (position === 'top') {
+    content.insertAdjacentHTML('beforebegin', statusBar);
+  } else {
+    content.insertAdjacentHTML('afterend', statusBar);
+  }
+}
+
 // ── tmux result rendering ─────────────────────────────
 function renderTmuxResult() {
   const config = generateTmuxConfig();
-  document.getElementById('tmux-config-output').textContent = config;
+  document.getElementById('tmux-config-output').innerHTML = highlightConf(config);
+  buildTmuxStatusPreview();
 }
 
 function copyTmuxConfig() {
-  const text = document.getElementById('tmux-config-output').textContent;
+  const text = document.getElementById('tmux-config-output').innerText;
   navigator.clipboard.writeText(text).then(() => {
     showToast('コピーしました');
   }).catch(() => {
@@ -1961,7 +2190,7 @@ function copyTmuxConfig() {
 }
 
 function downloadTmuxConfig() {
-  const text = document.getElementById('tmux-config-output').textContent;
+  const text = document.getElementById('tmux-config-output').innerText;
   const blob = new Blob([text], { type: 'text/plain' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -2155,11 +2384,11 @@ function generateZshConfig() {
 // ── zsh result rendering ──────────────────────────────
 function renderZshResult() {
   const config = generateZshConfig();
-  document.getElementById('zsh-config-output').textContent = config;
+  document.getElementById('zsh-config-output').innerHTML = highlightZsh(config);
 }
 
 function copyZshConfig() {
-  const text = document.getElementById('zsh-config-output').textContent;
+  const text = document.getElementById('zsh-config-output').innerText;
   navigator.clipboard.writeText(text).then(() => {
     showToast('コピーしました');
   }).catch(() => {
@@ -2168,7 +2397,7 @@ function copyZshConfig() {
 }
 
 function downloadZshConfig() {
-  const text = document.getElementById('zsh-config-output').textContent;
+  const text = document.getElementById('zsh-config-output').innerText;
   const blob = new Blob([text], { type: 'text/plain' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -2179,6 +2408,32 @@ function downloadZshConfig() {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+// ── Keyboard navigation ───────────────────────────────
+document.addEventListener('keydown', (e) => {
+  // Ignore when typing in input fields
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+
+  if (e.key === 'Enter') {
+    // Find the visible primary button and click it
+    const visibleStep = document.querySelector('.step.visible');
+    if (!visibleStep) return;
+    const primaryBtn = visibleStep.querySelector('button.primary:not(:disabled)');
+    if (primaryBtn) {
+      e.preventDefault();
+      primaryBtn.click();
+    }
+  } else if (e.key === 'Escape' || e.key === 'Backspace') {
+    // Go back
+    const visibleStep = document.querySelector('.step.visible');
+    if (!visibleStep) return;
+    const backBtn = visibleStep.querySelector('.nav button:not(.primary)');
+    if (backBtn && backBtn.textContent.trim()) {
+      e.preventDefault();
+      backBtn.click();
+    }
+  }
+});
 
 // ── Init ──────────────────────────────────────────────
 // Hide all tool-specific steps initially
