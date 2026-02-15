@@ -575,6 +575,10 @@
           <div class="option-radio"></div>
           <div class="option-label">tmux<small>ターミナルマルチプレクサの設定 (.tmux.conf)</small></div>
         </div>
+        <div class="option" data-value="zsh">
+          <div class="option-radio"></div>
+          <div class="option-label">zsh<small>Zシェルの設定 (.zshrc)</small></div>
+        </div>
       </div>
       <div class="nav">
         <div></div>
@@ -1226,14 +1230,182 @@
         <div></div>
       </div>
     </div>
+
+    <!-- zsh Steps -->
+    <!-- zsh Step 0: Plugin Manager -->
+    <div class="step zsh-step" id="zsh-step-0">
+      <h2>プラグイン管理システム</h2>
+      <p class="description">zsh のプラグイン管理をどのように行いますか？</p>
+      <div class="options" data-key="zsh-plugin-manager" data-type="radio">
+        <div class="option" data-value="oh-my-zsh">
+          <div class="option-radio"></div>
+          <div class="option-label">Oh My Zsh<small>人気のある機能豊富なフレームワーク</small></div>
+        </div>
+        <div class="option" data-value="zinit">
+          <div class="option-radio"></div>
+          <div class="option-label">Zinit<small>高速で柔軟なプラグインマネージャー</small></div>
+        </div>
+        <div class="option" data-value="none">
+          <div class="option-radio"></div>
+          <div class="option-label">なし<small>シンプルな設定のみ</small></div>
+        </div>
+      </div>
+      <div class="nav">
+        <button onclick="goBackToToolSelection()">ツール選択に戻る</button>
+        <button class="primary" onclick="nextStep()" id="btn-zsh-next-0" disabled>次へ</button>
+      </div>
+    </div>
+
+    <!-- zsh Step 1: Basic Settings -->
+    <div class="step zsh-step" id="zsh-step-1">
+      <h2>基本設定</h2>
+      <p class="description">zsh の基本的な動作を設定します</p>
+      <div class="detail-section">
+        <h3>ヒストリー設定</h3>
+        <div class="detail-row">
+          <label for="zsh-history-size">ヒストリーサイズ</label>
+          <div class="detail-control">
+            <input type="range" id="zsh-history-size" min="1000" max="100000" step="1000" value="10000">
+            <span id="zsh-history-size-val">10000</span>
+          </div>
+        </div>
+        <div class="detail-row">
+          <label for="zsh-save-history">保存するヒストリー数</label>
+          <div class="detail-control">
+            <input type="range" id="zsh-save-history" min="1000" max="100000" step="1000" value="10000">
+            <span id="zsh-save-history-val">10000</span>
+          </div>
+        </div>
+        <div class="detail-row">
+          <label for="zsh-share-history">複数のセッション間でヒストリーを共有</label>
+          <div class="detail-control">
+            <label class="toggle">
+              <input type="checkbox" id="zsh-share-history" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="detail-row">
+          <label for="zsh-hist-ignore-dups">重複するコマンドを無視</label>
+          <div class="detail-control">
+            <label class="toggle">
+              <input type="checkbox" id="zsh-hist-ignore-dups" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="detail-section">
+        <h3>補完設定</h3>
+        <div class="detail-row">
+          <label for="zsh-auto-menu">自動補完メニューを表示</label>
+          <div class="detail-control">
+            <label class="toggle">
+              <input type="checkbox" id="zsh-auto-menu" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="detail-row">
+          <label for="zsh-case-sensitive">大文字小文字を区別する</label>
+          <div class="detail-control">
+            <label class="toggle">
+              <input type="checkbox" id="zsh-case-sensitive">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="detail-section">
+        <h3>キーバインド</h3>
+        <div class="options" data-key="zsh-keymap" data-type="radio">
+          <div class="option" data-value="emacs">
+            <div class="option-radio"></div>
+            <div class="option-label">Emacs モード<small>Ctrl+a/e で行頭/行末移動</small></div>
+          </div>
+          <div class="option" data-value="vi">
+            <div class="option-radio"></div>
+            <div class="option-label">Vi モード<small>Vim スタイルの編集モード</small></div>
+          </div>
+        </div>
+      </div>
+      <div class="nav">
+        <button onclick="prevStep()">戻る</button>
+        <button class="primary" onclick="nextStep()" id="btn-zsh-next-1" disabled>次へ</button>
+      </div>
+    </div>
+
+    <!-- zsh Step 2: Plugins/Theme -->
+    <div class="step zsh-step" id="zsh-step-2">
+      <h2>プラグイン・テーマ</h2>
+      <p class="description" id="zsh-plugins-description">有効にするプラグインを選択してください</p>
+      <div id="zsh-plugins-container">
+        <!-- Dynamically generated based on plugin manager -->
+      </div>
+      <div class="nav">
+        <button onclick="prevStep()">戻る</button>
+        <button class="primary" onclick="nextStep()">次へ</button>
+      </div>
+    </div>
+
+    <!-- zsh Step 3: Aliases -->
+    <div class="step zsh-step" id="zsh-step-3">
+      <h2>エイリアス設定</h2>
+      <p class="description">よく使うコマンドのエイリアスを選択してください（複数選択可）</p>
+      <div class="options" data-key="zsh-aliases" data-type="checkbox">
+        <div class="option" data-value="ls">
+          <div class="option-check"></div>
+          <div class="option-label">ls 系エイリアス<small>ll='ls -lh', la='ls -A' など</small></div>
+        </div>
+        <div class="option" data-value="git">
+          <div class="option-check"></div>
+          <div class="option-label">Git エイリアス<small>gst='git status', gco='git checkout' など</small></div>
+        </div>
+        <div class="option" data-value="docker">
+          <div class="option-check"></div>
+          <div class="option-label">Docker エイリアス<small>dk='docker', dkc='docker-compose' など</small></div>
+        </div>
+        <div class="option" data-value="navigation">
+          <div class="option-check"></div>
+          <div class="option-label">ナビゲーション<small>..='cd ..', ...='cd ../..' など</small></div>
+        </div>
+        <div class="option" data-value="safety">
+          <div class="option-check"></div>
+          <div class="option-label">安全性向上<small>rm='rm -i', cp='cp -i', mv='mv -i'</small></div>
+        </div>
+      </div>
+      <div class="nav">
+        <button onclick="prevStep()">戻る</button>
+        <button class="primary" onclick="nextStep()">生成する</button>
+      </div>
+    </div>
+
+    <!-- zsh Step 4: Result -->
+    <div class="step zsh-step" id="zsh-step-4">
+      <h2>生成結果</h2>
+      <p class="description">以下の設定を <code>~/.zshrc</code> に保存してください</p>
+      <div class="result-area">
+        <div class="config-preview" id="zsh-config-output"></div>
+      </div>
+      <div class="result-actions">
+        <button class="primary" onclick="copyZshConfig()">クリップボードにコピー</button>
+        <button onclick="downloadZshConfig()">.zshrc をダウンロード</button>
+        <button onclick="goToStart()">最初からやり直す</button>
+      </div>
+      <div class="nav" style="margin-top:1rem">
+        <button onclick="prevStep()">戻って編集</button>
+        <div></div>
+      </div>
+    </div>
   </div>
 
   <div class="copy-toast" id="toast">コピーしました</div>
 
   <footer>
     <p>
-      Powered by <a href="https://starship.rs" target="_blank" rel="noopener">Starship</a>
-      &amp; <a href="https://github.com/tmux/tmux/wiki" target="_blank" rel="noopener">tmux</a>
+      Powered by <a href="https://starship.rs" target="_blank" rel="noopener">Starship</a>,
+      <a href="https://github.com/tmux/tmux/wiki" target="_blank" rel="noopener">tmux</a>
+      &amp; <a href="https://www.zsh.org/" target="_blank" rel="noopener">zsh</a>
     </p>
   </footer>
 
