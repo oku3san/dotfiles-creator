@@ -1135,6 +1135,9 @@ function generateTmuxConfig() {
     } else if (splitKeys === 'intuitive') {
       lines.push('bind h split-window -h');
       lines.push('bind v split-window -v');
+    } else if (splitKeys === 'terminal') {
+      lines.push('bind d split-window -h');
+      lines.push('bind D split-window -v');
     }
     lines.push('unbind \'"\'');
     lines.push('unbind %');
@@ -1189,6 +1192,11 @@ function generateTmuxConfig() {
       lines.push('# Window navigation with Shift+arrows');
       lines.push('bind -n S-Left previous-window');
       lines.push('bind -n S-Right next-window');
+    }
+
+    if (extraBindings.includes('new-window')) {
+      lines.push('# New window (tab) with prefix + t');
+      lines.push('bind t new-window');
     }
 
     lines.push('');
