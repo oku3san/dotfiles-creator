@@ -1,7 +1,8 @@
 // ── State ──────────────────────────────────────────────
-let selectedTool = null; // 'starship' or 'tmux'
+let selectedTool = null; // 'starship', 'tmux', or 'zsh'
 const TOTAL_STEPS = 6;
 const TMUX_TOTAL_STEPS = 5;
+const ZSH_TOTAL_STEPS = 5;
 let currentStep = 0;
 
 // Starship answers
@@ -53,10 +54,26 @@ const tmuxAnswers = {
   plugins: [],
 };
 
+// zsh answers
+const zshAnswers = {
+  pluginManager: null,
+  historySize: 10000,
+  saveHistory: 10000,
+  shareHistory: true,
+  histIgnoreDups: true,
+  autoMenu: true,
+  caseSensitive: false,
+  keymap: null,
+  theme: null,
+  plugins: [],
+  aliases: [],
+};
+
 // ── Tool Selection ────────────────────────────────────
 function selectTool() {
   const toolOption = document.querySelector('.option[data-value="starship"].selected') ||
-                      document.querySelector('.option[data-value="tmux"].selected');
+                      document.querySelector('.option[data-value="tmux"].selected') ||
+                      document.querySelector('.option[data-value="zsh"].selected');
   if (!toolOption) return;
 
   selectedTool = toolOption.dataset.value;
@@ -68,11 +85,18 @@ function selectTool() {
   if (selectedTool === 'starship') {
     document.querySelectorAll('.starship-step').forEach(s => s.style.display = '');
     document.querySelectorAll('.tmux-step').forEach(s => s.style.display = 'none');
+    document.querySelectorAll('.zsh-step').forEach(s => s.style.display = 'none');
     showStep(0);
   } else if (selectedTool === 'tmux') {
     document.querySelectorAll('.starship-step').forEach(s => s.style.display = 'none');
     document.querySelectorAll('.tmux-step').forEach(s => s.style.display = '');
+    document.querySelectorAll('.zsh-step').forEach(s => s.style.display = 'none');
     showTmuxStep(0);
+  } else if (selectedTool === 'zsh') {
+    document.querySelectorAll('.starship-step').forEach(s => s.style.display = 'none');
+    document.querySelectorAll('.tmux-step').forEach(s => s.style.display = 'none');
+    document.querySelectorAll('.zsh-step').forEach(s => s.style.display = '');
+    showZshStep(0);
   }
 }
 
@@ -88,7 +112,9 @@ function goBackToToolSelection() {
 function renderProgress() {
   const bar = document.getElementById('progress');
   bar.innerHTML = '';
-  const totalSteps = selectedTool === 'tmux' ? TMUX_TOTAL_STEPS : TOTAL_STEPS;
+  let totalSteps = TOTAL_STEPS;
+  if (selectedTool === 'tmux') totalSteps = TMUX_TOTAL_STEPS;
+  if (selectedTool === 'zsh') totalSteps = ZSH_TOTAL_STEPS;
   for (let i = 0; i < totalSteps; i++) {
     const el = document.createElement('div');
     el.className = 'progress-step';
@@ -128,9 +154,28 @@ function showTmuxStep(index) {
   }
 }
 
+function showZshStep(index) {
+  document.querySelectorAll('.zsh-step').forEach((s, i) => {
+    s.classList.toggle('visible', i === index);
+  });
+  currentStep = index;
+  renderProgress();
+
+  // Build plugins section when entering step 2
+  if (index === 2) {
+    buildZshPluginsSection();
+  }
+
+  if (index === ZSH_TOTAL_STEPS - 1) {
+    renderZshResult();
+  }
+}
+
 function nextStep() {
   if (selectedTool === 'tmux') {
     if (currentStep < TMUX_TOTAL_STEPS - 1) showTmuxStep(currentStep + 1);
+  } else if (selectedTool === 'zsh') {
+    if (currentStep < ZSH_TOTAL_STEPS - 1) showZshStep(currentStep + 1);
   } else {
     if (currentStep < TOTAL_STEPS - 1) showStep(currentStep + 1);
   }
@@ -140,6 +185,8 @@ function prevStep() {
   if (currentStep > 0) {
     if (selectedTool === 'tmux') {
       showTmuxStep(currentStep - 1);
+    } else if (selectedTool === 'zsh') {
+      showZshStep(currentStep - 1);
     } else {
       showStep(currentStep - 1);
     }
@@ -191,6 +238,19 @@ function goToStart() {
   tmuxAnswers.extraBindings = [];
   tmuxAnswers.plugins = [];
 
+  // Reset zsh answers
+  zshAnswers.pluginManager = null;
+  zshAnswers.historySize = 10000;
+  zshAnswers.saveHistory = 10000;
+  zshAnswers.shareHistory = true;
+  zshAnswers.histIgnoreDups = true;
+  zshAnswers.autoMenu = true;
+  zshAnswers.caseSensitive = false;
+  zshAnswers.keymap = null;
+  zshAnswers.theme = null;
+  zshAnswers.plugins = [];
+  zshAnswers.aliases = [];
+
   document.querySelectorAll('.option.selected').forEach(o => o.classList.remove('selected'));
   document.querySelectorAll('.color-swatch.selected').forEach(o => o.classList.remove('selected'));
   const customCharInput = document.getElementById('custom-char-input');
@@ -239,6 +299,29 @@ function goToStart() {
   const tmuxTerminalType = document.getElementById('tmux-terminal-type');
   if (tmuxTerminalType) tmuxTerminalType.value = 'screen-256color';
 
+  // Reset zsh DOM elements
+  const zshToggles = {
+    'zsh-share-history': true,
+    'zsh-hist-ignore-dups': true,
+    'zsh-auto-menu': true,
+    'zsh-case-sensitive': false,
+  };
+  for (const [id, defaultVal] of Object.entries(zshToggles)) {
+    const el = document.getElementById(id);
+    if (el) el.checked = defaultVal;
+  }
+
+  const zshRanges = {
+    'zsh-history-size': { value: 10000, display: 'zsh-history-size-val', suffix: '' },
+    'zsh-save-history': { value: 10000, display: 'zsh-save-history-val', suffix: '' },
+  };
+  for (const [id, cfg] of Object.entries(zshRanges)) {
+    const el = document.getElementById(id);
+    if (el) el.value = cfg.value;
+    const display = document.getElementById(cfg.display);
+    if (display) display.textContent = cfg.value + cfg.suffix;
+  }
+
   // Go back to tool selection
   goBackToToolSelection();
 }
@@ -284,6 +367,17 @@ function setupOptions() {
           return;
         }
 
+        // zsh options
+        if (key.startsWith('zsh-')) {
+          const zshKey = key.replace('zsh-', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+          zshAnswers[zshKey] = option.dataset.value;
+          const stepEl = option.closest('.step');
+          const stepId = stepEl?.id;
+          if (stepId === 'zsh-step-0') updateZshNextButton(0);
+          if (stepId === 'zsh-step-1') updateZshNextButton(1);
+          return;
+        }
+
         // Starship options
         answers[key] = option.dataset.value;
         // Clear custom character if a preset is selected
@@ -314,6 +408,17 @@ function setupOptions() {
             if (!tmuxAnswers[tmuxKey].includes(val)) tmuxAnswers[tmuxKey].push(val);
           } else {
             tmuxAnswers[tmuxKey] = tmuxAnswers[tmuxKey].filter(v => v !== val);
+          }
+          return;
+        }
+
+        // zsh checkboxes
+        if (key.startsWith('zsh-')) {
+          const zshKey = key.replace('zsh-', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+          if (option.classList.contains('selected')) {
+            if (!zshAnswers[zshKey].includes(val)) zshAnswers[zshKey].push(val);
+          } else {
+            zshAnswers[zshKey] = zshAnswers[zshKey].filter(v => v !== val);
           }
           return;
         }
@@ -387,6 +492,9 @@ function setupOptions() {
 
   // tmux specific listeners
   setupTmuxListeners();
+
+  // zsh specific listeners
+  setupZshListeners();
 }
 
 // ── tmux option listeners ─────────────────────────────
@@ -524,6 +632,53 @@ function setupTmuxListeners() {
   }
 }
 
+// ── zsh option listeners ──────────────────────────────
+function setupZshListeners() {
+  const zshHistorySize = document.getElementById('zsh-history-size');
+  if (zshHistorySize) {
+    zshHistorySize.addEventListener('input', () => {
+      zshAnswers.historySize = parseInt(zshHistorySize.value, 10);
+      document.getElementById('zsh-history-size-val').textContent = zshHistorySize.value;
+    });
+  }
+
+  const zshSaveHistory = document.getElementById('zsh-save-history');
+  if (zshSaveHistory) {
+    zshSaveHistory.addEventListener('input', () => {
+      zshAnswers.saveHistory = parseInt(zshSaveHistory.value, 10);
+      document.getElementById('zsh-save-history-val').textContent = zshSaveHistory.value;
+    });
+  }
+
+  const zshShareHistory = document.getElementById('zsh-share-history');
+  if (zshShareHistory) {
+    zshShareHistory.addEventListener('change', () => {
+      zshAnswers.shareHistory = zshShareHistory.checked;
+    });
+  }
+
+  const zshHistIgnoreDups = document.getElementById('zsh-hist-ignore-dups');
+  if (zshHistIgnoreDups) {
+    zshHistIgnoreDups.addEventListener('change', () => {
+      zshAnswers.histIgnoreDups = zshHistIgnoreDups.checked;
+    });
+  }
+
+  const zshAutoMenu = document.getElementById('zsh-auto-menu');
+  if (zshAutoMenu) {
+    zshAutoMenu.addEventListener('change', () => {
+      zshAnswers.autoMenu = zshAutoMenu.checked;
+    });
+  }
+
+  const zshCaseSensitive = document.getElementById('zsh-case-sensitive');
+  if (zshCaseSensitive) {
+    zshCaseSensitive.addEventListener('change', () => {
+      zshAnswers.caseSensitive = zshCaseSensitive.checked;
+    });
+  }
+}
+
 function updateTmuxNextButton(stepIndex) {
   const btn = document.getElementById(`btn-tmux-next-${stepIndex}`);
   if (!btn) return;
@@ -534,6 +689,17 @@ function updateTmuxNextButton(stepIndex) {
     btn.disabled = tmuxAnswers.theme === null;
   } else if (stepIndex === 2) {
     btn.disabled = tmuxAnswers.statusPosition === null;
+  }
+}
+
+function updateZshNextButton(stepIndex) {
+  const btn = document.getElementById(`btn-zsh-next-${stepIndex}`);
+  if (!btn) return;
+
+  if (stepIndex === 0) {
+    btn.disabled = zshAnswers.pluginManager === null;
+  } else if (stepIndex === 1) {
+    btn.disabled = zshAnswers.keymap === null;
   }
 }
 
@@ -793,6 +959,129 @@ function setupDetailListeners() {
       }
     });
   });
+}
+
+// ── zsh plugins section (Step 2) ──────────────────────
+function buildZshPluginsSection() {
+  const container = document.getElementById('zsh-plugins-container');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const pluginManager = zshAnswers.pluginManager;
+
+  if (pluginManager === 'oh-my-zsh') {
+    // Oh My Zsh: Theme + Plugins
+    const themeSection = document.createElement('div');
+    themeSection.className = 'detail-section';
+    themeSection.innerHTML = `
+      <h3>テーマ</h3>
+      <div class="options" data-key="zsh-theme" data-type="radio">
+        <div class="option" data-value="robbyrussell">
+          <div class="option-radio"></div>
+          <div class="option-label">robbyrussell<small>デフォルトのシンプルなテーマ</small></div>
+        </div>
+        <div class="option" data-value="agnoster">
+          <div class="option-radio"></div>
+          <div class="option-label">agnoster<small>パワーライン風のテーマ</small></div>
+        </div>
+        <div class="option" data-value="powerlevel10k">
+          <div class="option-radio"></div>
+          <div class="option-label">powerlevel10k<small>高速でカスタマイズ可能なテーマ</small></div>
+        </div>
+        <div class="option" data-value="bureau">
+          <div class="option-radio"></div>
+          <div class="option-label">bureau<small>Git情報が豊富なテーマ</small></div>
+        </div>
+      </div>
+    `;
+    container.appendChild(themeSection);
+
+    const pluginsSection = document.createElement('div');
+    pluginsSection.className = 'detail-section';
+    pluginsSection.innerHTML = `
+      <h3>プラグイン</h3>
+      <div class="options" data-key="zsh-plugins" data-type="checkbox">
+        <div class="option" data-value="git">
+          <div class="option-check"></div>
+          <div class="option-label">git<small>Git エイリアスとヘルパー</small></div>
+        </div>
+        <div class="option" data-value="zsh-autosuggestions">
+          <div class="option-check"></div>
+          <div class="option-label">zsh-autosuggestions<small>コマンド履歴からの自動提案</small></div>
+        </div>
+        <div class="option" data-value="zsh-syntax-highlighting">
+          <div class="option-check"></div>
+          <div class="option-label">zsh-syntax-highlighting<small>コマンドのシンタックスハイライト</small></div>
+        </div>
+        <div class="option" data-value="autojump">
+          <div class="option-check"></div>
+          <div class="option-label">autojump<small>ディレクトリへの高速ジャンプ</small></div>
+        </div>
+        <div class="option" data-value="docker">
+          <div class="option-check"></div>
+          <div class="option-label">docker<small>Docker コマンドの補完</small></div>
+        </div>
+        <div class="option" data-value="docker-compose">
+          <div class="option-check"></div>
+          <div class="option-label">docker-compose<small>Docker Compose の補完</small></div>
+        </div>
+        <div class="option" data-value="kubectl">
+          <div class="option-check"></div>
+          <div class="option-label">kubectl<small>Kubernetes の補完</small></div>
+        </div>
+        <div class="option" data-value="npm">
+          <div class="option-check"></div>
+          <div class="option-label">npm<small>npm の補完とエイリアス</small></div>
+        </div>
+        <div class="option" data-value="yarn">
+          <div class="option-check"></div>
+          <div class="option-label">yarn<small>Yarn の補完とエイリアス</small></div>
+        </div>
+      </div>
+    `;
+    container.appendChild(pluginsSection);
+
+  } else if (pluginManager === 'zinit') {
+    // Zinit: Plugins only
+    const pluginsSection = document.createElement('div');
+    pluginsSection.className = 'detail-section';
+    pluginsSection.innerHTML = `
+      <h3>プラグイン</h3>
+      <div class="options" data-key="zsh-plugins" data-type="checkbox">
+        <div class="option" data-value="zsh-autosuggestions">
+          <div class="option-check"></div>
+          <div class="option-label">zsh-autosuggestions<small>コマンド履歴からの自動提案</small></div>
+        </div>
+        <div class="option" data-value="zsh-syntax-highlighting">
+          <div class="option-check"></div>
+          <div class="option-label">zsh-syntax-highlighting<small>コマンドのシンタックスハイライト</small></div>
+        </div>
+        <div class="option" data-value="fast-syntax-highlighting">
+          <div class="option-check"></div>
+          <div class="option-label">fast-syntax-highlighting<small>高速なシンタックスハイライト</small></div>
+        </div>
+        <div class="option" data-value="zsh-completions">
+          <div class="option-check"></div>
+          <div class="option-label">zsh-completions<small>追加の補完定義</small></div>
+        </div>
+        <div class="option" data-value="powerlevel10k">
+          <div class="option-check"></div>
+          <div class="option-label">powerlevel10k<small>高速でカスタマイズ可能なテーマ</small></div>
+        </div>
+      </div>
+    `;
+    container.appendChild(pluginsSection);
+
+  } else if (pluginManager === 'none') {
+    // No plugin manager: Just a note
+    const note = document.createElement('p');
+    note.className = 'detail-note';
+    note.textContent = 'プラグインマネージャーを使用しないため、基本的な設定のみが生成されます。';
+    container.appendChild(note);
+  }
+
+  // Re-attach event listeners for the dynamically generated options
+  setupOptions();
 }
 
 // ── Config generation ─────────────────────────────────
@@ -1684,9 +1973,216 @@ function downloadTmuxConfig() {
   URL.revokeObjectURL(url);
 }
 
+// ── zsh config generation ─────────────────────────────
+function generateZshConfig() {
+  const lines = [];
+
+  lines.push('# zsh Configuration');
+  lines.push('# Generated by Dotfiles Config Generator');
+  lines.push('');
+
+  const pluginManager = zshAnswers.pluginManager;
+
+  // Plugin manager setup
+  if (pluginManager === 'oh-my-zsh') {
+    lines.push('# Path to oh-my-zsh installation');
+    lines.push('export ZSH="$HOME/.oh-my-zsh"');
+    lines.push('');
+
+    // Theme
+    if (zshAnswers.theme) {
+      lines.push('# Theme');
+      lines.push(`ZSH_THEME="${zshAnswers.theme}"`);
+      lines.push('');
+    } else {
+      lines.push('ZSH_THEME="robbyrussell"');
+      lines.push('');
+    }
+
+    // Plugins
+    if (zshAnswers.plugins.length > 0) {
+      lines.push('# Plugins');
+      lines.push(`plugins=(${zshAnswers.plugins.join(' ')})`);
+      lines.push('');
+    }
+
+    lines.push('source $ZSH/oh-my-zsh.sh');
+    lines.push('');
+
+  } else if (pluginManager === 'zinit') {
+    lines.push('# Zinit installation');
+    lines.push('ZINIT_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}/zinit/zinit.git"');
+    lines.push('[ ! -d $ZINIT_HOME ] && mkdir -p "$(dirname $ZINIT_HOME)"');
+    lines.push('[ ! -d $ZINIT_HOME/.git ] && git clone https://github.com/zdharma-continuum/zinit.git "$ZINIT_HOME"');
+    lines.push('source "${ZINIT_HOME}/zinit.zsh"');
+    lines.push('');
+
+    // Plugins
+    if (zshAnswers.plugins.length > 0) {
+      lines.push('# Plugins');
+      if (zshAnswers.plugins.includes('powerlevel10k')) {
+        lines.push('zinit ice depth=1; zinit light romkatv/powerlevel10k');
+      }
+      if (zshAnswers.plugins.includes('zsh-autosuggestions')) {
+        lines.push('zinit light zsh-users/zsh-autosuggestions');
+      }
+      if (zshAnswers.plugins.includes('zsh-syntax-highlighting')) {
+        lines.push('zinit light zsh-users/zsh-syntax-highlighting');
+      }
+      if (zshAnswers.plugins.includes('fast-syntax-highlighting')) {
+        lines.push('zinit light zdharma-continuum/fast-syntax-highlighting');
+      }
+      if (zshAnswers.plugins.includes('zsh-completions')) {
+        lines.push('zinit light zsh-users/zsh-completions');
+      }
+      lines.push('');
+    }
+  }
+
+  // History settings
+  lines.push('# History configuration');
+  lines.push(`HISTSIZE=${zshAnswers.historySize}`);
+  lines.push(`SAVEHIST=${zshAnswers.saveHistory}`);
+  lines.push('HISTFILE=~/.zsh_history');
+  if (zshAnswers.shareHistory) {
+    lines.push('setopt SHARE_HISTORY');
+  }
+  if (zshAnswers.histIgnoreDups) {
+    lines.push('setopt HIST_IGNORE_DUPS');
+    lines.push('setopt HIST_IGNORE_ALL_DUPS');
+  }
+  lines.push('setopt HIST_SAVE_NO_DUPS');
+  lines.push('setopt HIST_FIND_NO_DUPS');
+  lines.push('');
+
+  // Completion settings
+  lines.push('# Completion configuration');
+  lines.push('autoload -Uz compinit');
+  lines.push('compinit');
+  if (zshAnswers.autoMenu) {
+    lines.push('setopt AUTO_MENU');
+  }
+  if (!zshAnswers.caseSensitive) {
+    lines.push('zstyle ":completion:*" matcher-list "m:{a-z}={A-Za-z}"');
+  }
+  lines.push('zstyle ":completion:*" menu select');
+  lines.push('');
+
+  // Keymap
+  if (zshAnswers.keymap) {
+    lines.push('# Key bindings');
+    if (zshAnswers.keymap === 'vi') {
+      lines.push('bindkey -v');
+    } else if (zshAnswers.keymap === 'emacs') {
+      lines.push('bindkey -e');
+    }
+    lines.push('');
+  }
+
+  // Aliases
+  if (zshAnswers.aliases.length > 0) {
+    lines.push('# Aliases');
+
+    if (zshAnswers.aliases.includes('ls')) {
+      lines.push('# ls aliases');
+      lines.push('alias ll="ls -lh"');
+      lines.push('alias la="ls -A"');
+      lines.push('alias lla="ls -lAh"');
+      lines.push('alias l="ls -CF"');
+    }
+
+    if (zshAnswers.aliases.includes('git')) {
+      lines.push('# Git aliases');
+      lines.push('alias gst="git status"');
+      lines.push('alias gco="git checkout"');
+      lines.push('alias gcb="git checkout -b"');
+      lines.push('alias gaa="git add --all"');
+      lines.push('alias gcm="git commit -m"');
+      lines.push('alias gp="git push"');
+      lines.push('alias gpl="git pull"');
+      lines.push('alias glog="git log --oneline --graph --decorate"');
+    }
+
+    if (zshAnswers.aliases.includes('docker')) {
+      lines.push('# Docker aliases');
+      lines.push('alias dk="docker"');
+      lines.push('alias dkc="docker-compose"');
+      lines.push('alias dkps="docker ps"');
+      lines.push('alias dkpsa="docker ps -a"');
+      lines.push('alias dki="docker images"');
+      lines.push('alias dkrm="docker rm"');
+      lines.push('alias dkrmi="docker rmi"');
+    }
+
+    if (zshAnswers.aliases.includes('navigation')) {
+      lines.push('# Navigation aliases');
+      lines.push('alias ..="cd .."');
+      lines.push('alias ...="cd ../.."');
+      lines.push('alias ....="cd ../../.."');
+      lines.push('alias .....="cd ../../../.."');
+    }
+
+    if (zshAnswers.aliases.includes('safety')) {
+      lines.push('# Safety aliases');
+      lines.push('alias rm="rm -i"');
+      lines.push('alias cp="cp -i"');
+      lines.push('alias mv="mv -i"');
+    }
+
+    lines.push('');
+  }
+
+  // Additional notes
+  if (pluginManager === 'oh-my-zsh') {
+    lines.push('# Note: Install oh-my-zsh first:');
+    lines.push('# sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"');
+    lines.push('');
+    if (zshAnswers.plugins.includes('zsh-autosuggestions')) {
+      lines.push('# Install zsh-autosuggestions:');
+      lines.push('# git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions');
+      lines.push('');
+    }
+    if (zshAnswers.plugins.includes('zsh-syntax-highlighting')) {
+      lines.push('# Install zsh-syntax-highlighting:');
+      lines.push('# git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting');
+      lines.push('');
+    }
+  }
+
+  return lines.join('\n');
+}
+
+// ── zsh result rendering ──────────────────────────────
+function renderZshResult() {
+  const config = generateZshConfig();
+  document.getElementById('zsh-config-output').textContent = config;
+}
+
+function copyZshConfig() {
+  const text = document.getElementById('zsh-config-output').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('コピーしました');
+  }).catch(() => {
+    showToast('コピーに失敗しました');
+  });
+}
+
+function downloadZshConfig() {
+  const text = document.getElementById('zsh-config-output').textContent;
+  const blob = new Blob([text], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '.zshrc';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 // ── Init ──────────────────────────────────────────────
 // Hide all tool-specific steps initially
-document.querySelectorAll('.starship-step, .tmux-step').forEach(s => {
+document.querySelectorAll('.starship-step, .tmux-step, .zsh-step').forEach(s => {
   s.style.display = 'none';
 });
 
