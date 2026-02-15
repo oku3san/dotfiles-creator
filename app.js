@@ -1,8 +1,9 @@
 // ── State ──────────────────────────────────────────────
-let selectedTool = null; // 'starship', 'tmux', or 'zsh'
+let selectedTool = null; // 'starship', 'tmux', 'zsh', or 'neovim'
 const TOTAL_STEPS = 6;
 const TMUX_TOTAL_STEPS = 5;
 const ZSH_TOTAL_STEPS = 5;
+const NEOVIM_TOTAL_STEPS = 5;
 let currentStep = 0;
 
 // Starship answers
@@ -69,11 +70,40 @@ const zshAnswers = {
   aliases: [],
 };
 
+// Neovim answers
+const neovimAnswers = {
+  pluginManager: null,
+  number: true,
+  relativenumber: true,
+  cursorline: true,
+  signcolumn: true,
+  wrap: false,
+  termguicolors: true,
+  scrolloff: 8,
+  tabWidth: 2,
+  expandtab: true,
+  smartindent: true,
+  ignorecase: true,
+  smartcase: true,
+  hlsearch: true,
+  clipboard: true,
+  mouse: true,
+  swapfile: true,
+  undofile: true,
+  splitright: true,
+  splitbelow: true,
+  colorscheme: null,
+  plugins: [],
+  leader: null,
+  keymaps: [],
+};
+
 // ── Tool Selection ────────────────────────────────────
 function selectTool() {
   const toolOption = document.querySelector('.option[data-value="starship"].selected') ||
                       document.querySelector('.option[data-value="tmux"].selected') ||
-                      document.querySelector('.option[data-value="zsh"].selected');
+                      document.querySelector('.option[data-value="zsh"].selected') ||
+                      document.querySelector('.option[data-value="neovim"].selected');
   if (!toolOption) return;
 
   selectedTool = toolOption.dataset.value;
@@ -82,21 +112,23 @@ function selectTool() {
   document.getElementById('step-tool-selection').classList.remove('visible');
 
   // Show appropriate steps (clear inline styles so CSS classes control visibility)
+  const allStepClasses = ['.starship-step', '.tmux-step', '.zsh-step', '.neovim-step'];
+  allStepClasses.forEach(cls => {
+    document.querySelectorAll(cls).forEach(s => s.style.display = 'none');
+  });
+
   if (selectedTool === 'starship') {
     document.querySelectorAll('.starship-step').forEach(s => s.style.display = '');
-    document.querySelectorAll('.tmux-step').forEach(s => s.style.display = 'none');
-    document.querySelectorAll('.zsh-step').forEach(s => s.style.display = 'none');
     showStep(0);
   } else if (selectedTool === 'tmux') {
-    document.querySelectorAll('.starship-step').forEach(s => s.style.display = 'none');
     document.querySelectorAll('.tmux-step').forEach(s => s.style.display = '');
-    document.querySelectorAll('.zsh-step').forEach(s => s.style.display = 'none');
     showTmuxStep(0);
   } else if (selectedTool === 'zsh') {
-    document.querySelectorAll('.starship-step').forEach(s => s.style.display = 'none');
-    document.querySelectorAll('.tmux-step').forEach(s => s.style.display = 'none');
     document.querySelectorAll('.zsh-step').forEach(s => s.style.display = '');
     showZshStep(0);
+  } else if (selectedTool === 'neovim') {
+    document.querySelectorAll('.neovim-step').forEach(s => s.style.display = '');
+    showNeovimStep(0);
   }
 }
 
@@ -115,6 +147,7 @@ function renderProgress() {
   let totalSteps = TOTAL_STEPS;
   if (selectedTool === 'tmux') totalSteps = TMUX_TOTAL_STEPS;
   if (selectedTool === 'zsh') totalSteps = ZSH_TOTAL_STEPS;
+  if (selectedTool === 'neovim') totalSteps = NEOVIM_TOTAL_STEPS;
   for (let i = 0; i < totalSteps; i++) {
     const el = document.createElement('div');
     el.className = 'progress-step';
@@ -171,11 +204,30 @@ function showZshStep(index) {
   }
 }
 
+function showNeovimStep(index) {
+  document.querySelectorAll('.neovim-step').forEach((s, i) => {
+    s.classList.toggle('visible', i === index);
+  });
+  currentStep = index;
+  renderProgress();
+
+  // Build plugins section when entering step 2
+  if (index === 2) {
+    buildNeovimPluginsSection();
+  }
+
+  if (index === NEOVIM_TOTAL_STEPS - 1) {
+    renderNeovimResult();
+  }
+}
+
 function nextStep() {
   if (selectedTool === 'tmux') {
     if (currentStep < TMUX_TOTAL_STEPS - 1) showTmuxStep(currentStep + 1);
   } else if (selectedTool === 'zsh') {
     if (currentStep < ZSH_TOTAL_STEPS - 1) showZshStep(currentStep + 1);
+  } else if (selectedTool === 'neovim') {
+    if (currentStep < NEOVIM_TOTAL_STEPS - 1) showNeovimStep(currentStep + 1);
   } else {
     if (currentStep < TOTAL_STEPS - 1) showStep(currentStep + 1);
   }
@@ -187,6 +239,8 @@ function prevStep() {
       showTmuxStep(currentStep - 1);
     } else if (selectedTool === 'zsh') {
       showZshStep(currentStep - 1);
+    } else if (selectedTool === 'neovim') {
+      showNeovimStep(currentStep - 1);
     } else {
       showStep(currentStep - 1);
     }
@@ -299,6 +353,32 @@ function goToStart() {
   const tmuxTerminalType = document.getElementById('tmux-terminal-type');
   if (tmuxTerminalType) tmuxTerminalType.value = 'screen-256color';
 
+  // Reset neovim answers
+  neovimAnswers.pluginManager = null;
+  neovimAnswers.number = true;
+  neovimAnswers.relativenumber = true;
+  neovimAnswers.cursorline = true;
+  neovimAnswers.signcolumn = true;
+  neovimAnswers.wrap = false;
+  neovimAnswers.termguicolors = true;
+  neovimAnswers.scrolloff = 8;
+  neovimAnswers.tabWidth = 2;
+  neovimAnswers.expandtab = true;
+  neovimAnswers.smartindent = true;
+  neovimAnswers.ignorecase = true;
+  neovimAnswers.smartcase = true;
+  neovimAnswers.hlsearch = true;
+  neovimAnswers.clipboard = true;
+  neovimAnswers.mouse = true;
+  neovimAnswers.swapfile = true;
+  neovimAnswers.undofile = true;
+  neovimAnswers.splitright = true;
+  neovimAnswers.splitbelow = true;
+  neovimAnswers.colorscheme = null;
+  neovimAnswers.plugins = [];
+  neovimAnswers.leader = null;
+  neovimAnswers.keymaps = [];
+
   // Reset zsh DOM elements
   const zshToggles = {
     'zsh-share-history': true,
@@ -316,6 +396,42 @@ function goToStart() {
     'zsh-save-history': { value: 10000, display: 'zsh-save-history-val', suffix: '' },
   };
   for (const [id, cfg] of Object.entries(zshRanges)) {
+    const el = document.getElementById(id);
+    if (el) el.value = cfg.value;
+    const display = document.getElementById(cfg.display);
+    if (display) display.textContent = cfg.value + cfg.suffix;
+  }
+
+  // Reset neovim DOM elements
+  const nvimToggles = {
+    'nvim-number': true,
+    'nvim-relativenumber': true,
+    'nvim-cursorline': true,
+    'nvim-signcolumn': true,
+    'nvim-wrap': false,
+    'nvim-termguicolors': true,
+    'nvim-expandtab': true,
+    'nvim-smartindent': true,
+    'nvim-ignorecase': true,
+    'nvim-smartcase': true,
+    'nvim-hlsearch': true,
+    'nvim-clipboard': true,
+    'nvim-mouse': true,
+    'nvim-swapfile': true,
+    'nvim-undofile': true,
+    'nvim-splitright': true,
+    'nvim-splitbelow': true,
+  };
+  for (const [id, defaultVal] of Object.entries(nvimToggles)) {
+    const el = document.getElementById(id);
+    if (el) el.checked = defaultVal;
+  }
+
+  const nvimRanges = {
+    'nvim-scrolloff': { value: 8, display: 'nvim-scrolloff-val', suffix: '' },
+    'nvim-tabwidth': { value: 2, display: 'nvim-tabwidth-val', suffix: '' },
+  };
+  for (const [id, cfg] of Object.entries(nvimRanges)) {
     const el = document.getElementById(id);
     if (el) el.value = cfg.value;
     const display = document.getElementById(cfg.display);
@@ -378,6 +494,18 @@ function setupOptions() {
           return;
         }
 
+        // neovim options
+        if (key.startsWith('neovim-')) {
+          const nvimKey = key.replace('neovim-', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+          neovimAnswers[nvimKey] = option.dataset.value;
+          const stepEl = option.closest('.step');
+          const stepId = stepEl?.id;
+          if (stepId === 'neovim-step-0') updateNeovimNextButton(0);
+          if (stepId === 'neovim-step-2') updateNeovimNextButton(2);
+          if (stepId === 'neovim-step-3') updateNeovimNextButton(3);
+          return;
+        }
+
         // Starship options
         answers[key] = option.dataset.value;
         // Clear custom character if a preset is selected
@@ -419,6 +547,17 @@ function setupOptions() {
             if (!zshAnswers[zshKey].includes(val)) zshAnswers[zshKey].push(val);
           } else {
             zshAnswers[zshKey] = zshAnswers[zshKey].filter(v => v !== val);
+          }
+          return;
+        }
+
+        // neovim checkboxes
+        if (key.startsWith('neovim-')) {
+          const nvimKey = key.replace('neovim-', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+          if (option.classList.contains('selected')) {
+            if (!neovimAnswers[nvimKey].includes(val)) neovimAnswers[nvimKey].push(val);
+          } else {
+            neovimAnswers[nvimKey] = neovimAnswers[nvimKey].filter(v => v !== val);
           }
           return;
         }
@@ -495,6 +634,9 @@ function setupOptions() {
 
   // zsh specific listeners
   setupZshListeners();
+
+  // neovim specific listeners
+  setupNeovimListeners();
 }
 
 // ── tmux option listeners ─────────────────────────────
@@ -727,6 +869,9 @@ function bulkSelect(dataKey, selectAll) {
   } else if (dataKey.startsWith('zsh-')) {
     const zshKey = dataKey.replace('zsh-', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
     zshAnswers[zshKey] = values;
+  } else if (dataKey.startsWith('neovim-')) {
+    const nvimKey = dataKey.replace('neovim-', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+    neovimAnswers[nvimKey] = values;
   }
 }
 
@@ -1245,6 +1390,9 @@ function setupDynamicOptions(root) {
         if (key.startsWith('zsh-')) {
           const zshKey = key.replace('zsh-', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
           zshAnswers[zshKey] = option.dataset.value;
+        } else if (key.startsWith('neovim-')) {
+          const nvimKey = key.replace('neovim-', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+          neovimAnswers[nvimKey] = option.dataset.value;
         }
       });
     });
@@ -1262,6 +1410,13 @@ function setupDynamicOptions(root) {
             if (!zshAnswers[zshKey].includes(val)) zshAnswers[zshKey].push(val);
           } else {
             zshAnswers[zshKey] = zshAnswers[zshKey].filter(v => v !== val);
+          }
+        } else if (key.startsWith('neovim-')) {
+          const nvimKey = key.replace('neovim-', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+          if (option.classList.contains('selected')) {
+            if (!neovimAnswers[nvimKey].includes(val)) neovimAnswers[nvimKey].push(val);
+          } else {
+            neovimAnswers[nvimKey] = neovimAnswers[nvimKey].filter(v => v !== val);
           }
         }
       });
@@ -2409,6 +2564,785 @@ function downloadZshConfig() {
   URL.revokeObjectURL(url);
 }
 
+// ── Neovim option listeners ───────────────────────────
+function setupNeovimListeners() {
+  const nvimToggles = {
+    'nvim-number': 'number',
+    'nvim-relativenumber': 'relativenumber',
+    'nvim-cursorline': 'cursorline',
+    'nvim-signcolumn': 'signcolumn',
+    'nvim-wrap': 'wrap',
+    'nvim-termguicolors': 'termguicolors',
+    'nvim-expandtab': 'expandtab',
+    'nvim-smartindent': 'smartindent',
+    'nvim-ignorecase': 'ignorecase',
+    'nvim-smartcase': 'smartcase',
+    'nvim-hlsearch': 'hlsearch',
+    'nvim-clipboard': 'clipboard',
+    'nvim-mouse': 'mouse',
+    'nvim-swapfile': 'swapfile',
+    'nvim-undofile': 'undofile',
+    'nvim-splitright': 'splitright',
+    'nvim-splitbelow': 'splitbelow',
+  };
+
+  for (const [id, key] of Object.entries(nvimToggles)) {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('change', () => {
+        neovimAnswers[key] = el.checked;
+      });
+    }
+  }
+
+  const nvimScrolloff = document.getElementById('nvim-scrolloff');
+  if (nvimScrolloff) {
+    nvimScrolloff.addEventListener('input', () => {
+      neovimAnswers.scrolloff = parseInt(nvimScrolloff.value, 10);
+      document.getElementById('nvim-scrolloff-val').textContent = nvimScrolloff.value;
+    });
+  }
+
+  const nvimTabwidth = document.getElementById('nvim-tabwidth');
+  if (nvimTabwidth) {
+    nvimTabwidth.addEventListener('input', () => {
+      neovimAnswers.tabWidth = parseInt(nvimTabwidth.value, 10);
+      document.getElementById('nvim-tabwidth-val').textContent = nvimTabwidth.value;
+    });
+  }
+}
+
+function updateNeovimNextButton(stepIndex) {
+  const btn = document.getElementById(`btn-neovim-next-${stepIndex}`);
+  if (!btn) return;
+
+  if (stepIndex === 0) {
+    btn.disabled = neovimAnswers.pluginManager === null;
+  } else if (stepIndex === 2) {
+    btn.disabled = neovimAnswers.colorscheme === null;
+  }
+}
+
+// ── Neovim plugins section (Step 2) ───────────────────
+function buildNeovimPluginsSection() {
+  const container = document.getElementById('neovim-plugins-container');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const pm = neovimAnswers.pluginManager;
+  if (pm === 'none') {
+    const note = document.createElement('p');
+    note.className = 'detail-note';
+    note.textContent = 'プラグインマネージャーを使用しないため、カラースキームは手動でインストールしてください。';
+    container.appendChild(note);
+    return;
+  }
+
+  const pluginsSection = document.createElement('div');
+  pluginsSection.className = 'detail-section';
+  pluginsSection.innerHTML = `
+    <h3>プラグイン</h3>
+    <div class="bulk-actions">
+      <button class="bulk-btn" onclick="bulkSelect('neovim-plugins', true)">すべて選択</button>
+      <button class="bulk-btn" onclick="bulkSelect('neovim-plugins', false)">すべて解除</button>
+    </div>
+    <div class="options" data-key="neovim-plugins" data-type="checkbox">
+      <div class="option" data-value="treesitter">
+        <div class="option-check"></div>
+        <div class="option-label">nvim-treesitter<small>高速なシンタックスハイライト</small></div>
+      </div>
+      <div class="option" data-value="lsp">
+        <div class="option-check"></div>
+        <div class="option-label">nvim-lspconfig<small>LSP クライアントの設定</small></div>
+      </div>
+      <div class="option" data-value="cmp">
+        <div class="option-check"></div>
+        <div class="option-label">nvim-cmp<small>自動補完エンジン</small></div>
+      </div>
+      <div class="option" data-value="telescope">
+        <div class="option-check"></div>
+        <div class="option-label">telescope.nvim<small>ファジーファインダー</small></div>
+      </div>
+      <div class="option" data-value="nvim-tree">
+        <div class="option-check"></div>
+        <div class="option-label">nvim-tree<small>ファイルエクスプローラー</small></div>
+      </div>
+      <div class="option" data-value="lualine">
+        <div class="option-check"></div>
+        <div class="option-label">lualine.nvim<small>ステータスライン</small></div>
+      </div>
+      <div class="option" data-value="gitsigns">
+        <div class="option-check"></div>
+        <div class="option-label">gitsigns.nvim<small>Git の変更表示</small></div>
+      </div>
+      <div class="option" data-value="autopairs">
+        <div class="option-check"></div>
+        <div class="option-label">nvim-autopairs<small>括弧の自動補完</small></div>
+      </div>
+      <div class="option" data-value="comment">
+        <div class="option-check"></div>
+        <div class="option-label">Comment.nvim<small>コメントのトグル</small></div>
+      </div>
+      <div class="option" data-value="indent-blankline">
+        <div class="option-check"></div>
+        <div class="option-label">indent-blankline<small>インデントガイド表示</small></div>
+      </div>
+      <div class="option" data-value="bufferline">
+        <div class="option-check"></div>
+        <div class="option-label">bufferline.nvim<small>タブ風バッファライン</small></div>
+      </div>
+      <div class="option" data-value="which-key">
+        <div class="option-check"></div>
+        <div class="option-label">which-key.nvim<small>キーバインドのヘルプ表示</small></div>
+      </div>
+    </div>
+  `;
+  container.appendChild(pluginsSection);
+
+  setupDynamicOptions(container);
+}
+
+// ── Neovim Lua syntax highlighting ────────────────────
+function highlightLua(text) {
+  return text.split('\n').map(line => {
+    // Comments
+    if (/^\s*--/.test(line)) {
+      return `<span class="token-comment">${escapeHtml(line)}</span>`;
+    }
+    // Strings
+    let result = escapeHtml(line);
+    result = result.replace(/(&quot;[^&]*?&quot;|&#39;[^&]*?&#39;)/g, '<span class="token-string">$1</span>');
+    // Booleans
+    result = result.replace(/\b(true|false|nil)\b/g, '<span class="token-boolean">$1</span>');
+    // Numbers
+    result = result.replace(/\b(\d+)\b/g, '<span class="token-number">$1</span>');
+    // Keywords
+    result = result.replace(/\b(local|return|if|then|else|elseif|end|function|require|for|do|in)\b/g, '<span class="token-key">$1</span>');
+    return result;
+  }).join('\n');
+}
+
+// ── Neovim config generation ──────────────────────────
+function generateNeovimConfig() {
+  const lines = [];
+  const pm = neovimAnswers.pluginManager;
+
+  lines.push('-- Neovim Configuration');
+  lines.push('-- Generated by Dotfiles Config Generator');
+  lines.push('');
+
+  // Leader key
+  const leaderMap = { space: ' ', comma: ',', backslash: '\\\\' };
+  const leaderKey = leaderMap[neovimAnswers.leader] || ' ';
+  lines.push('-- Leader key');
+  lines.push(`vim.g.mapleader = "${leaderKey}"`);
+  lines.push(`vim.g.maplocalleader = "${leaderKey}"`);
+  lines.push('');
+
+  // Basic options
+  lines.push('-- Basic options');
+  const opt = neovimAnswers;
+  if (opt.number) lines.push('vim.opt.number = true');
+  if (opt.relativenumber) lines.push('vim.opt.relativenumber = true');
+  if (opt.cursorline) lines.push('vim.opt.cursorline = true');
+  if (opt.signcolumn) lines.push('vim.opt.signcolumn = "yes"');
+  if (!opt.wrap) lines.push('vim.opt.wrap = false');
+  if (opt.termguicolors) lines.push('vim.opt.termguicolors = true');
+  lines.push(`vim.opt.scrolloff = ${opt.scrolloff}`);
+  lines.push('');
+
+  // Indent
+  lines.push('-- Indent settings');
+  lines.push(`vim.opt.tabstop = ${opt.tabWidth}`);
+  lines.push(`vim.opt.shiftwidth = ${opt.tabWidth}`);
+  lines.push(`vim.opt.softtabstop = ${opt.tabWidth}`);
+  if (opt.expandtab) lines.push('vim.opt.expandtab = true');
+  if (opt.smartindent) lines.push('vim.opt.smartindent = true');
+  lines.push('');
+
+  // Search
+  lines.push('-- Search settings');
+  if (opt.ignorecase) lines.push('vim.opt.ignorecase = true');
+  if (opt.smartcase) lines.push('vim.opt.smartcase = true');
+  if (opt.hlsearch) lines.push('vim.opt.hlsearch = true');
+  lines.push('vim.opt.incsearch = true');
+  lines.push('');
+
+  // Misc
+  lines.push('-- Misc settings');
+  if (opt.clipboard) lines.push('vim.opt.clipboard = "unnamedplus"');
+  if (opt.mouse) lines.push('vim.opt.mouse = "a"');
+  if (opt.swapfile) lines.push('vim.opt.swapfile = false');
+  if (opt.undofile) lines.push('vim.opt.undofile = true');
+  if (opt.splitright) lines.push('vim.opt.splitright = true');
+  if (opt.splitbelow) lines.push('vim.opt.splitbelow = true');
+  lines.push('vim.opt.updatetime = 250');
+  lines.push('vim.opt.timeoutlen = 300');
+  lines.push('');
+
+  // Plugin manager + plugins
+  if (pm === 'lazy') {
+    lines.push('-- Bootstrap lazy.nvim');
+    lines.push('local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"');
+    lines.push('if not vim.loop.fs_stat(lazypath) then');
+    lines.push('  vim.fn.system({');
+    lines.push('    "git", "clone", "--filter=blob:none",');
+    lines.push('    "https://github.com/folke/lazy.nvim.git",');
+    lines.push('    "--branch=stable", lazypath,');
+    lines.push('  })');
+    lines.push('end');
+    lines.push('vim.opt.rtp:prepend(lazypath)');
+    lines.push('');
+    lines.push('require("lazy").setup({');
+    appendLazyPlugins(lines);
+    lines.push('})');
+    lines.push('');
+  } else if (pm === 'packer') {
+    lines.push('-- Bootstrap packer.nvim');
+    lines.push('local ensure_packer = function()');
+    lines.push('  local fn = vim.fn');
+    lines.push('  local install_path = fn.stdpath("data") .. "/site/pack/packer/start/packer.nvim"');
+    lines.push('  if fn.empty(fn.glob(install_path)) > 0 then');
+    lines.push('    fn.system({"git", "clone", "--depth", "1", "https://github.com/wbthomason/packer.nvim", install_path})');
+    lines.push('    vim.cmd([[packadd packer.nvim]])');
+    lines.push('    return true');
+    lines.push('  end');
+    lines.push('  return false');
+    lines.push('end');
+    lines.push('local packer_bootstrap = ensure_packer()');
+    lines.push('');
+    lines.push('require("packer").startup(function(use)');
+    lines.push('  use "wbthomason/packer.nvim"');
+    appendPackerPlugins(lines);
+    lines.push('  if packer_bootstrap then');
+    lines.push('    require("packer").sync()');
+    lines.push('  end');
+    lines.push('end)');
+    lines.push('');
+  }
+
+  // Colorscheme
+  if (neovimAnswers.colorscheme) {
+    lines.push('-- Colorscheme');
+    lines.push(`vim.cmd.colorscheme("${neovimAnswers.colorscheme}")`);
+    lines.push('');
+  }
+
+  // Plugin setup calls
+  if (pm !== 'none') {
+    appendPluginSetup(lines);
+  }
+
+  // Keymaps
+  const km = neovimAnswers.keymaps;
+  if (km.length > 0) {
+    lines.push('-- Keymaps');
+    lines.push('local keymap = vim.keymap.set');
+    lines.push('');
+
+    if (km.includes('window-nav')) {
+      lines.push('-- Window navigation');
+      lines.push('keymap("n", "<C-h>", "<C-w>h", { desc = "Move to left window" })');
+      lines.push('keymap("n", "<C-j>", "<C-w>j", { desc = "Move to lower window" })');
+      lines.push('keymap("n", "<C-k>", "<C-w>k", { desc = "Move to upper window" })');
+      lines.push('keymap("n", "<C-l>", "<C-w>l", { desc = "Move to right window" })');
+      lines.push('');
+    }
+
+    if (km.includes('buffer-nav')) {
+      lines.push('-- Buffer navigation');
+      lines.push('keymap("n", "<S-h>", ":bprevious<CR>", { desc = "Previous buffer" })');
+      lines.push('keymap("n", "<S-l>", ":bnext<CR>", { desc = "Next buffer" })');
+      lines.push('');
+    }
+
+    if (km.includes('move-lines')) {
+      lines.push('-- Move lines');
+      lines.push('keymap("n", "<A-j>", ":m .+1<CR>==", { desc = "Move line down" })');
+      lines.push('keymap("n", "<A-k>", ":m .-2<CR>==", { desc = "Move line up" })');
+      lines.push('keymap("v", "<A-j>", ":m \'>+1<CR>gv=gv", { desc = "Move selection down" })');
+      lines.push('keymap("v", "<A-k>", ":m \'<-2<CR>gv=gv", { desc = "Move selection up" })');
+      lines.push('');
+    }
+
+    if (km.includes('clear-search')) {
+      lines.push('-- Clear search highlight');
+      lines.push('keymap("n", "<Esc>", ":nohlsearch<CR>", { desc = "Clear search highlight" })');
+      lines.push('');
+    }
+
+    if (km.includes('better-indent')) {
+      lines.push('-- Better indenting');
+      lines.push('keymap("v", "<", "<gv", { desc = "Indent left and reselect" })');
+      lines.push('keymap("v", ">", ">gv", { desc = "Indent right and reselect" })');
+      lines.push('');
+    }
+
+    if (km.includes('save-file')) {
+      lines.push('-- Save file');
+      lines.push('keymap("n", "<C-s>", ":w<CR>", { desc = "Save file" })');
+      lines.push('keymap("i", "<C-s>", "<Esc>:w<CR>", { desc = "Save file" })');
+      lines.push('');
+    }
+
+    if (km.includes('quit')) {
+      lines.push('-- Quit');
+      lines.push('keymap("n", "<leader>q", ":q<CR>", { desc = "Quit" })');
+      lines.push('');
+    }
+
+    if (km.includes('split-window')) {
+      lines.push('-- Split window');
+      lines.push('keymap("n", "<leader>|", ":vsplit<CR>", { desc = "Vertical split" })');
+      lines.push('keymap("n", "<leader>-", ":split<CR>", { desc = "Horizontal split" })');
+      lines.push('');
+    }
+
+    if (km.includes('diagnostic-nav')) {
+      lines.push('-- Diagnostic navigation');
+      lines.push('keymap("n", "[d", vim.diagnostic.goto_prev, { desc = "Previous diagnostic" })');
+      lines.push('keymap("n", "]d", vim.diagnostic.goto_next, { desc = "Next diagnostic" })');
+      lines.push('keymap("n", "<leader>e", vim.diagnostic.open_float, { desc = "Show diagnostic" })');
+      lines.push('');
+    }
+
+    // Telescope keymaps
+    if (neovimAnswers.plugins.includes('telescope')) {
+      lines.push('-- Telescope keymaps');
+      lines.push('keymap("n", "<leader>ff", ":Telescope find_files<CR>", { desc = "Find files" })');
+      lines.push('keymap("n", "<leader>fg", ":Telescope live_grep<CR>", { desc = "Live grep" })');
+      lines.push('keymap("n", "<leader>fb", ":Telescope buffers<CR>", { desc = "Buffers" })');
+      lines.push('keymap("n", "<leader>fh", ":Telescope help_tags<CR>", { desc = "Help tags" })');
+      lines.push('');
+    }
+
+    // Nvim-tree keymap
+    if (neovimAnswers.plugins.includes('nvim-tree')) {
+      lines.push('-- File explorer');
+      lines.push('keymap("n", "<leader>e", ":NvimTreeToggle<CR>", { desc = "Toggle file explorer" })');
+      lines.push('');
+    }
+  }
+
+  return lines.join('\n');
+}
+
+function appendLazyPlugins(lines) {
+  const cs = neovimAnswers.colorscheme;
+  const csRepoMap = {
+    catppuccin: '"catppuccin/nvim", name = "catppuccin", priority = 1000',
+    tokyonight: '"folke/tokyonight.nvim", priority = 1000',
+    gruvbox: '"ellisonleao/gruvbox.nvim", priority = 1000',
+    nord: '"shaunsingh/nord.nvim", priority = 1000',
+    dracula: '"Mofiqul/dracula.nvim", priority = 1000',
+    onedark: '"navarasu/onedark.nvim", priority = 1000',
+    'rose-pine': '"rose-pine/neovim", name = "rose-pine", priority = 1000',
+    kanagawa: '"rebelot/kanagawa.nvim", priority = 1000',
+  };
+  if (cs && csRepoMap[cs]) {
+    lines.push(`  { ${csRepoMap[cs]} },`);
+  }
+
+  const plugins = neovimAnswers.plugins;
+  if (plugins.includes('treesitter')) {
+    lines.push('  { "nvim-treesitter/nvim-treesitter", build = ":TSUpdate" },');
+  }
+  if (plugins.includes('lsp')) {
+    lines.push('  { "neovim/nvim-lspconfig" },');
+  }
+  if (plugins.includes('cmp')) {
+    lines.push('  { "hrsh7th/nvim-cmp", dependencies = { "hrsh7th/cmp-nvim-lsp", "hrsh7th/cmp-buffer", "hrsh7th/cmp-path", "L3MON4D3/LuaSnip", "saadparwaiz1/cmp_luasnip" } },');
+  }
+  if (plugins.includes('telescope')) {
+    lines.push('  { "nvim-telescope/telescope.nvim", dependencies = { "nvim-lua/plenary.nvim" } },');
+  }
+  if (plugins.includes('nvim-tree')) {
+    lines.push('  { "nvim-tree/nvim-tree.lua", dependencies = { "nvim-tree/nvim-web-devicons" } },');
+  }
+  if (plugins.includes('lualine')) {
+    lines.push('  { "nvim-lualine/lualine.nvim", dependencies = { "nvim-tree/nvim-web-devicons" } },');
+  }
+  if (plugins.includes('gitsigns')) {
+    lines.push('  { "lewis6991/gitsigns.nvim" },');
+  }
+  if (plugins.includes('autopairs')) {
+    lines.push('  { "windwp/nvim-autopairs", event = "InsertEnter" },');
+  }
+  if (plugins.includes('comment')) {
+    lines.push('  { "numToStr/Comment.nvim" },');
+  }
+  if (plugins.includes('indent-blankline')) {
+    lines.push('  { "lukas-reineke/indent-blankline.nvim", main = "ibl" },');
+  }
+  if (plugins.includes('bufferline')) {
+    lines.push('  { "akinsho/bufferline.nvim", dependencies = { "nvim-tree/nvim-web-devicons" } },');
+  }
+  if (plugins.includes('which-key')) {
+    lines.push('  { "folke/which-key.nvim", event = "VeryLazy" },');
+  }
+}
+
+function appendPackerPlugins(lines) {
+  const cs = neovimAnswers.colorscheme;
+  const csRepoMap = {
+    catppuccin: 'catppuccin/nvim',
+    tokyonight: 'folke/tokyonight.nvim',
+    gruvbox: 'ellisonleao/gruvbox.nvim',
+    nord: 'shaunsingh/nord.nvim',
+    dracula: 'Mofiqul/dracula.nvim',
+    onedark: 'navarasu/onedark.nvim',
+    'rose-pine': 'rose-pine/neovim',
+    kanagawa: 'rebelot/kanagawa.nvim',
+  };
+  if (cs && csRepoMap[cs]) {
+    lines.push(`  use "${csRepoMap[cs]}"`);
+  }
+
+  const plugins = neovimAnswers.plugins;
+  if (plugins.includes('treesitter')) {
+    lines.push('  use { "nvim-treesitter/nvim-treesitter", run = ":TSUpdate" }');
+  }
+  if (plugins.includes('lsp')) {
+    lines.push('  use "neovim/nvim-lspconfig"');
+  }
+  if (plugins.includes('cmp')) {
+    lines.push('  use { "hrsh7th/nvim-cmp", requires = { "hrsh7th/cmp-nvim-lsp", "hrsh7th/cmp-buffer", "hrsh7th/cmp-path", "L3MON4D3/LuaSnip", "saadparwaiz1/cmp_luasnip" } }');
+  }
+  if (plugins.includes('telescope')) {
+    lines.push('  use { "nvim-telescope/telescope.nvim", requires = { "nvim-lua/plenary.nvim" } }');
+  }
+  if (plugins.includes('nvim-tree')) {
+    lines.push('  use { "nvim-tree/nvim-tree.lua", requires = { "nvim-tree/nvim-web-devicons" } }');
+  }
+  if (plugins.includes('lualine')) {
+    lines.push('  use { "nvim-lualine/lualine.nvim", requires = { "nvim-tree/nvim-web-devicons" } }');
+  }
+  if (plugins.includes('gitsigns')) {
+    lines.push('  use "lewis6991/gitsigns.nvim"');
+  }
+  if (plugins.includes('autopairs')) {
+    lines.push('  use "windwp/nvim-autopairs"');
+  }
+  if (plugins.includes('comment')) {
+    lines.push('  use "numToStr/Comment.nvim"');
+  }
+  if (plugins.includes('indent-blankline')) {
+    lines.push('  use "lukas-reineke/indent-blankline.nvim"');
+  }
+  if (plugins.includes('bufferline')) {
+    lines.push('  use { "akinsho/bufferline.nvim", requires = { "nvim-tree/nvim-web-devicons" } }');
+  }
+  if (plugins.includes('which-key')) {
+    lines.push('  use "folke/which-key.nvim"');
+  }
+}
+
+function appendPluginSetup(lines) {
+  const plugins = neovimAnswers.plugins;
+
+  if (plugins.includes('treesitter')) {
+    lines.push('-- Treesitter');
+    lines.push('require("nvim-treesitter.configs").setup({');
+    lines.push('  ensure_installed = { "lua", "vim", "vimdoc", "javascript", "typescript", "python", "html", "css", "json", "yaml", "bash" },');
+    lines.push('  highlight = { enable = true },');
+    lines.push('  indent = { enable = true },');
+    lines.push('})');
+    lines.push('');
+  }
+
+  if (plugins.includes('lsp')) {
+    lines.push('-- LSP');
+    lines.push('local lspconfig = require("lspconfig")');
+    lines.push('-- Add your language servers here, e.g.:');
+    lines.push('-- lspconfig.lua_ls.setup({})');
+    lines.push('-- lspconfig.ts_ls.setup({})');
+    lines.push('-- lspconfig.pyright.setup({})');
+    lines.push('');
+  }
+
+  if (plugins.includes('cmp')) {
+    lines.push('-- Completion');
+    lines.push('local cmp = require("cmp")');
+    lines.push('local luasnip = require("luasnip")');
+    lines.push('cmp.setup({');
+    lines.push('  snippet = {');
+    lines.push('    expand = function(args) luasnip.lsp_expand(args.body) end,');
+    lines.push('  },');
+    lines.push('  mapping = cmp.mapping.preset.insert({');
+    lines.push('    ["<C-b>"] = cmp.mapping.scroll_docs(-4),');
+    lines.push('    ["<C-f>"] = cmp.mapping.scroll_docs(4),');
+    lines.push('    ["<C-Space>"] = cmp.mapping.complete(),');
+    lines.push('    ["<C-e>"] = cmp.mapping.abort(),');
+    lines.push('    ["<CR>"] = cmp.mapping.confirm({ select = true }),');
+    lines.push('  }),');
+    lines.push('  sources = cmp.config.sources({');
+    lines.push('    { name = "nvim_lsp" },');
+    lines.push('    { name = "luasnip" },');
+    lines.push('  }, {');
+    lines.push('    { name = "buffer" },');
+    lines.push('    { name = "path" },');
+    lines.push('  }),');
+    lines.push('})');
+    lines.push('');
+  }
+
+  if (plugins.includes('telescope')) {
+    lines.push('-- Telescope');
+    lines.push('require("telescope").setup({})');
+    lines.push('');
+  }
+
+  if (plugins.includes('nvim-tree')) {
+    lines.push('-- File explorer');
+    lines.push('require("nvim-tree").setup({})');
+    lines.push('');
+  }
+
+  if (plugins.includes('lualine')) {
+    lines.push('-- Statusline');
+    const cs = neovimAnswers.colorscheme;
+    const lualineTheme = cs || 'auto';
+    lines.push(`require("lualine").setup({ options = { theme = "${lualineTheme}" } })`);
+    lines.push('');
+  }
+
+  if (plugins.includes('gitsigns')) {
+    lines.push('-- Git signs');
+    lines.push('require("gitsigns").setup({})');
+    lines.push('');
+  }
+
+  if (plugins.includes('autopairs')) {
+    lines.push('-- Autopairs');
+    lines.push('require("nvim-autopairs").setup({})');
+    lines.push('');
+  }
+
+  if (plugins.includes('comment')) {
+    lines.push('-- Comment');
+    lines.push('require("Comment").setup({})');
+    lines.push('');
+  }
+
+  if (plugins.includes('indent-blankline')) {
+    lines.push('-- Indent guides');
+    lines.push('require("ibl").setup({})');
+    lines.push('');
+  }
+
+  if (plugins.includes('bufferline')) {
+    lines.push('-- Bufferline');
+    lines.push('require("bufferline").setup({})');
+    lines.push('');
+  }
+
+  if (plugins.includes('which-key')) {
+    lines.push('-- Which-key');
+    lines.push('require("which-key").setup({})');
+    lines.push('');
+  }
+}
+
+// ── Neovim theme colors for preview ───────────────────
+function getNeovimThemeColors(theme) {
+  const themes = {
+    catppuccin: {
+      bg: '#1e1e2e', fg: '#cdd6f4', lineNum: '#585b70', cursorLine: '#313244',
+      accent: '#cba6f7', keyword: '#cba6f7', string: '#a6e3a1', comment: '#6c7086',
+      func: '#89b4fa', type: '#f9e2af', statusBg: '#181825', statusFg: '#cdd6f4',
+      sidebarBg: '#181825', border: '#313244', number: '#fab387',
+    },
+    tokyonight: {
+      bg: '#1a1b26', fg: '#c0caf5', lineNum: '#3b4261', cursorLine: '#292e42',
+      accent: '#7aa2f7', keyword: '#bb9af7', string: '#9ece6a', comment: '#565f89',
+      func: '#7aa2f7', type: '#e0af68', statusBg: '#16161e', statusFg: '#c0caf5',
+      sidebarBg: '#16161e', border: '#3b4261', number: '#ff9e64',
+    },
+    gruvbox: {
+      bg: '#282828', fg: '#ebdbb2', lineNum: '#504945', cursorLine: '#3c3836',
+      accent: '#fe8019', keyword: '#fb4934', string: '#b8bb26', comment: '#928374',
+      func: '#fabd2f', type: '#8ec07c', statusBg: '#1d2021', statusFg: '#ebdbb2',
+      sidebarBg: '#1d2021', border: '#3c3836', number: '#d3869b',
+    },
+    nord: {
+      bg: '#2e3440', fg: '#d8dee9', lineNum: '#4c566a', cursorLine: '#3b4252',
+      accent: '#88c0d0', keyword: '#81a1c1', string: '#a3be8c', comment: '#616e88',
+      func: '#88c0d0', type: '#ebcb8b', statusBg: '#242933', statusFg: '#d8dee9',
+      sidebarBg: '#242933', border: '#4c566a', number: '#b48ead',
+    },
+    dracula: {
+      bg: '#282a36', fg: '#f8f8f2', lineNum: '#44475a', cursorLine: '#44475a',
+      accent: '#bd93f9', keyword: '#ff79c6', string: '#f1fa8c', comment: '#6272a4',
+      func: '#50fa7b', type: '#8be9fd', statusBg: '#21222c', statusFg: '#f8f8f2',
+      sidebarBg: '#21222c', border: '#44475a', number: '#bd93f9',
+    },
+    onedark: {
+      bg: '#282c34', fg: '#abb2bf', lineNum: '#4b5263', cursorLine: '#2c313c',
+      accent: '#61afef', keyword: '#c678dd', string: '#98c379', comment: '#5c6370',
+      func: '#61afef', type: '#e5c07b', statusBg: '#21252b', statusFg: '#abb2bf',
+      sidebarBg: '#21252b', border: '#3e4452', number: '#d19a66',
+    },
+    'rose-pine': {
+      bg: '#191724', fg: '#e0def4', lineNum: '#44415a', cursorLine: '#26233a',
+      accent: '#c4a7e7', keyword: '#31748f', string: '#f6c177', comment: '#6e6a86',
+      func: '#9ccfd8', type: '#c4a7e7', statusBg: '#1f1d2e', statusFg: '#e0def4',
+      sidebarBg: '#1f1d2e', border: '#44415a', number: '#eb6f92',
+    },
+    kanagawa: {
+      bg: '#1f1f28', fg: '#dcd7ba', lineNum: '#54546d', cursorLine: '#2a2a37',
+      accent: '#7e9cd8', keyword: '#957fb8', string: '#98bb6c', comment: '#727169',
+      func: '#7e9cd8', type: '#e6c384', statusBg: '#16161d', statusFg: '#dcd7ba',
+      sidebarBg: '#16161d', border: '#54546d', number: '#d27e99',
+    },
+  };
+  return themes[theme] || themes.catppuccin;
+}
+
+// ── Neovim preview simulation ─────────────────────────
+function buildNeovimPreview() {
+  const preview = document.getElementById('nvim-preview');
+  if (!preview) return;
+
+  const theme = neovimAnswers.colorscheme || 'catppuccin';
+  const colors = getNeovimThemeColors(theme);
+  const plugins = neovimAnswers.plugins;
+  const hasTree = plugins.includes('nvim-tree');
+  const hasLualine = plugins.includes('lualine');
+  const hasBufferline = plugins.includes('bufferline');
+  const hasGitsigns = plugins.includes('gitsigns');
+  const hasIndent = plugins.includes('indent-blankline');
+
+  // Sample code lines
+  const codeLines = [
+    { num: 1, text: '<span style="color:{{keyword}}">local</span> M = {}', git: '' },
+    { num: 2, text: '', git: '' },
+    { num: 3, text: '<span style="color:{{comment}}">-- Calculate the sum of numbers</span>', git: '' },
+    { num: 4, text: '<span style="color:{{keyword}}">function</span> <span style="color:{{func}}">M.sum</span>(a, b)', git: '+' },
+    { num: 5, text: '{{indent}}<span style="color:{{keyword}}">return</span> a + b', git: '+' },
+    { num: 6, text: '<span style="color:{{keyword}}">end</span>', git: '+' },
+    { num: 7, text: '', git: '' },
+    { num: 8, text: '<span style="color:{{keyword}}">function</span> <span style="color:{{func}}">M.greet</span>(name)', git: '' },
+    { num: 9, text: '{{indent}}<span style="color:{{keyword}}">local</span> msg = <span style="color:{{string}}">"Hello, "</span> .. name', git: '~' },
+    { num: 10, text: '{{indent}}<span style="color:{{keyword}}">return</span> msg', git: '' },
+    { num: 11, text: '<span style="color:{{keyword}}">end</span>', git: '' },
+    { num: 12, text: '', git: '' },
+    { num: 13, text: '<span style="color:{{keyword}}">return</span> M', git: '' },
+  ];
+
+  const indentGuide = hasIndent ? `<span style="color:${colors.border}">│</span> ` : '  ';
+
+  let html = '';
+
+  // Titlebar
+  html += `<div class="nvim-preview-titlebar" style="background:${colors.sidebarBg};color:${colors.comment}">`;
+  html += `<span>NVIM</span>`;
+  html += `<span>init.lua</span>`;
+  html += `</div>`;
+
+  // Bufferline
+  if (hasBufferline) {
+    html += `<div style="background:${colors.sidebarBg};color:${colors.comment};padding:0.15rem 0.5rem;font-size:0.7rem;border-bottom:1px solid ${colors.border};display:flex;gap:0.75rem">`;
+    html += `<span style="color:${colors.accent};font-weight:bold"> init.lua</span>`;
+    html += `<span> utils.lua</span>`;
+    html += `<span> README.md</span>`;
+    html += `</div>`;
+  }
+
+  // Body
+  html += `<div class="nvim-preview-body" style="background:${colors.bg};color:${colors.fg}">`;
+
+  // Sidebar (nvim-tree)
+  if (hasTree) {
+    html += `<div class="nvim-preview-sidebar" style="background:${colors.sidebarBg};border-color:${colors.border};color:${colors.fg}">`;
+    html += `<div class="nvim-preview-sidebar-title" style="color:${colors.accent}"> my-project</div>`;
+    html += `<div class="nvim-preview-sidebar-item" style="color:${colors.comment}">  .git</div>`;
+    html += `<div class="nvim-preview-sidebar-item" style="color:${colors.accent}">  lua</div>`;
+    html += `<div class="nvim-preview-sidebar-item active" style="color:${colors.string}">   init.lua</div>`;
+    html += `<div class="nvim-preview-sidebar-item" style="color:${colors.fg}">   utils.lua</div>`;
+    html += `<div class="nvim-preview-sidebar-item" style="color:${colors.fg}">  README.md</div>`;
+    html += `</div>`;
+  }
+
+  // Editor
+  html += `<div class="nvim-preview-editor">`;
+  const cursorLineNum = 4;
+  codeLines.forEach(line => {
+    const isCursor = line.num === cursorLineNum;
+    const bgStyle = isCursor && neovimAnswers.cursorline ? `background:${colors.cursorLine};` : '';
+    const lineNumColor = isCursor ? colors.accent : colors.lineNum;
+    const lineNumText = neovimAnswers.relativenumber && neovimAnswers.number
+      ? (isCursor ? String(line.num).padStart(2) : String(Math.abs(line.num - cursorLineNum)).padStart(2))
+      : (neovimAnswers.number ? String(line.num).padStart(2) : '  ');
+
+    let gitSign = '';
+    if (hasGitsigns && line.git) {
+      const gitColor = line.git === '+' ? colors.string : colors.accent;
+      gitSign = `<span style="color:${gitColor}">│</span>`;
+    } else if (hasGitsigns) {
+      gitSign = ' ';
+    }
+
+    let text = line.text
+      .replace(/\{\{keyword\}\}/g, colors.keyword)
+      .replace(/\{\{func\}\}/g, colors.func)
+      .replace(/\{\{string\}\}/g, colors.string)
+      .replace(/\{\{comment\}\}/g, colors.comment)
+      .replace(/\{\{number\}\}/g, colors.number)
+      .replace(/\{\{indent\}\}/g, indentGuide);
+
+    html += `<div class="nvim-preview-line" style="${bgStyle}">`;
+    html += `<span class="nvim-preview-linenum" style="color:${lineNumColor}">${lineNumText}</span>`;
+    html += `${gitSign}`;
+    html += `<span class="nvim-preview-linecontent">${text || ' '}</span>`;
+    html += `</div>`;
+  });
+  html += `</div>`;
+
+  html += `</div>`; // end body
+
+  // Lualine statusline
+  if (hasLualine) {
+    html += `<div class="nvim-preview-statusline" style="background:${colors.statusBg};color:${colors.statusFg};border-color:${colors.border}">`;
+    html += `<span><span style="background:${colors.accent};color:${colors.bg};padding:0 0.4rem;border-radius:2px;font-weight:bold"> NORMAL </span> <span style="color:${colors.comment}"> main</span> <span style="color:${colors.fg}">init.lua</span></span>`;
+    html += `<span><span style="color:${colors.comment}">lua</span> <span style="background:${colors.accent};color:${colors.bg};padding:0 0.4rem;border-radius:2px"> 4:1 </span></span>`;
+    html += `</div>`;
+  }
+
+  // Command line
+  html += `<div class="nvim-preview-cmdline" style="background:${colors.bg};color:${colors.comment};border-color:${colors.border}">:w init.lua</div>`;
+
+  preview.innerHTML = html;
+}
+
+// ── Neovim result rendering ───────────────────────────
+function renderNeovimResult() {
+  const config = generateNeovimConfig();
+  document.getElementById('neovim-config-output').innerHTML = highlightLua(config);
+  buildNeovimPreview();
+}
+
+function copyNeovimConfig() {
+  const text = document.getElementById('neovim-config-output').innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('コピーしました');
+  }).catch(() => {
+    showToast('コピーに失敗しました');
+  });
+}
+
+function downloadNeovimConfig() {
+  const text = document.getElementById('neovim-config-output').innerText;
+  const blob = new Blob([text], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'init.lua';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 // ── Keyboard navigation ───────────────────────────────
 document.addEventListener('keydown', (e) => {
   // Ignore when typing in input fields
@@ -2437,7 +3371,7 @@ document.addEventListener('keydown', (e) => {
 
 // ── Init ──────────────────────────────────────────────
 // Hide all tool-specific steps initially
-document.querySelectorAll('.starship-step, .tmux-step, .zsh-step').forEach(s => {
+document.querySelectorAll('.starship-step, .tmux-step, .zsh-step, .neovim-step').forEach(s => {
   s.style.display = 'none';
 });
 
