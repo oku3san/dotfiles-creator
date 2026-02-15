@@ -536,6 +536,127 @@
       accent-color: var(--accent);
     }
 
+    /* Preset buttons */
+    .preset-buttons {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .preset-btn {
+      padding: 0.4rem 1rem;
+      border-radius: 20px;
+      border: 1px solid var(--accent);
+      background: transparent;
+      color: var(--accent);
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .preset-btn:hover {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    /* Select all / Deselect all */
+    .bulk-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .bulk-btn {
+      padding: 0.3rem 0.75rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    .bulk-btn:hover {
+      color: var(--text);
+      border-color: var(--text-muted);
+    }
+
+    /* Syntax highlighting */
+    .config-preview .token-comment { color: #8b949e; }
+    .config-preview .token-section { color: #dd6620; font-weight: bold; }
+    .config-preview .token-key { color: #58a6ff; }
+    .config-preview .token-value { color: #3fb950; }
+    .config-preview .token-string { color: #a5d6ff; }
+    .config-preview .token-boolean { color: #ff7b72; }
+    .config-preview .token-number { color: #d29922; }
+
+    /* tmux preview */
+    .tmux-preview {
+      background: #000;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0;
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+
+    .tmux-preview-content {
+      padding: 1rem;
+      min-height: 80px;
+      color: #c0c0c0;
+    }
+
+    .tmux-preview-status {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.8rem;
+      line-height: 1.4;
+    }
+
+    .tmux-preview-status-left,
+    .tmux-preview-status-right {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tmux-preview-status-center {
+      flex: 1;
+      text-align: center;
+    }
+
+    .tmux-preview-window {
+      display: inline-block;
+      padding: 0 0.5rem;
+    }
+
+    .tmux-preview-window.active {
+      font-weight: bold;
+    }
+
+    /* Keyboard shortcut hints */
+    .keyboard-hint {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      text-align: center;
+      margin-top: 0.5rem;
+    }
+
+    .keyboard-hint kbd {
+      display: inline-block;
+      padding: 0.1rem 0.4rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--surface);
+      font-size: 0.7rem;
+      font-family: inherit;
+    }
+
     footer {
       text-align: center;
       padding: 1.5rem;
@@ -676,6 +797,16 @@
     <div class="step starship-step" id="step-3">
       <h2>有効にするモジュール</h2>
       <p class="description">プロンプトに表示したい情報を選んでください（複数選択可）</p>
+      <div class="preset-buttons">
+        <button class="preset-btn" onclick="applyStarshipPreset('minimal')">Minimal</button>
+        <button class="preset-btn" onclick="applyStarshipPreset('full')">Full</button>
+        <button class="preset-btn" onclick="applyStarshipPreset('devops')">DevOps</button>
+        <button class="preset-btn" onclick="applyStarshipPreset('webdev')">Web Dev</button>
+      </div>
+      <div class="bulk-actions">
+        <button class="bulk-btn" onclick="bulkSelect('modules', true)">すべて選択</button>
+        <button class="bulk-btn" onclick="bulkSelect('modules', false)">すべて解除</button>
+      </div>
       <div class="options" data-key="modules" data-type="checkbox">
         <div class="option" data-value="git">
           <div class="option-check"></div>
@@ -1024,6 +1155,10 @@
       </div>
       <div class="detail-section">
         <h3>表示する情報</h3>
+        <div class="bulk-actions">
+          <button class="bulk-btn" onclick="bulkSelect('tmux-status-modules', true)">すべて選択</button>
+          <button class="bulk-btn" onclick="bulkSelect('tmux-status-modules', false)">すべて解除</button>
+        </div>
         <div class="options" data-key="tmux-status-modules" data-type="checkbox">
           <div class="option" data-value="session">
             <div class="option-check"></div>
@@ -1126,6 +1261,10 @@
       </div>
       <div class="detail-section">
         <h3>追加機能</h3>
+        <div class="bulk-actions">
+          <button class="bulk-btn" onclick="bulkSelect('tmux-extra-bindings', true)">すべて選択</button>
+          <button class="bulk-btn" onclick="bulkSelect('tmux-extra-bindings', false)">すべて解除</button>
+        </div>
         <div class="options" data-key="tmux-extra-bindings" data-type="checkbox">
           <div class="option" data-value="vim-navigation">
             <div class="option-check"></div>
@@ -1217,6 +1356,13 @@
     <div class="step tmux-step" id="tmux-step-4">
       <h2>生成結果</h2>
       <p class="description">以下の設定を <code>~/.tmux.conf</code> に保存してください</p>
+      <div class="tmux-preview" id="tmux-preview">
+        <div class="tmux-preview-content">
+          <span style="color:#8b949e;font-size:0.75rem">プレビュー (イメージ)</span><br>
+          <span style="color:#3fb950">user@myhost</span>:<span style="color:#58a6ff">~/projects</span>$ <span style="animation:blink 1s step-end infinite">▌</span>
+        </div>
+        <div class="tmux-preview-status" id="tmux-status-preview"></div>
+      </div>
       <div class="result-area">
         <div class="config-preview" id="tmux-config-output"></div>
       </div>
@@ -1352,6 +1498,10 @@
     <div class="step zsh-step" id="zsh-step-3">
       <h2>エイリアス設定</h2>
       <p class="description">よく使うコマンドのエイリアスを選択してください（複数選択可）</p>
+      <div class="bulk-actions">
+        <button class="bulk-btn" onclick="bulkSelect('zsh-aliases', true)">すべて選択</button>
+        <button class="bulk-btn" onclick="bulkSelect('zsh-aliases', false)">すべて解除</button>
+      </div>
       <div class="options" data-key="zsh-aliases" data-type="checkbox">
         <div class="option" data-value="ls">
           <div class="option-check"></div>
@@ -1399,6 +1549,7 @@
     </div>
   </div>
 
+  <div class="keyboard-hint"><kbd>Enter</kbd> 次へ &nbsp; <kbd>Esc</kbd> 戻る</div>
   <div class="copy-toast" id="toast">コピーしました</div>
 
   <footer>
