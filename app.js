@@ -244,7 +244,8 @@ function setupOptions() {
 
         // tmux options
         if (key.startsWith('tmux-')) {
-          tmuxAnswers[key.replace('tmux-', '')] = option.dataset.value;
+          const tmuxKey = key.replace('tmux-', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+          tmuxAnswers[tmuxKey] = option.dataset.value;
           const stepEl = option.closest('.step');
           const stepId = stepEl?.id;
           if (stepId === 'tmux-step-0') updateTmuxNextButton(0);
@@ -278,7 +279,7 @@ function setupOptions() {
 
         // tmux checkboxes
         if (key.startsWith('tmux-')) {
-          const tmuxKey = key.replace('tmux-', '');
+          const tmuxKey = key.replace('tmux-', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
           if (option.classList.contains('selected')) {
             if (!tmuxAnswers[tmuxKey].includes(val)) tmuxAnswers[tmuxKey].push(val);
           } else {
