@@ -18,6 +18,10 @@ const answers = {
   timeFormat: '%H:%M',
   cmdDurationMinTime: 2000,
   rightPromptModules: [],
+  gitShowStash: false,
+  gitBranchTruncation: 20,
+  pythonShowVenv: true,
+  memoryThreshold: 75,
 };
 
 // tmux answers
@@ -29,6 +33,12 @@ const tmuxAnswers = {
   autoRename: false,
   visualBell: true,
   historyLimit: 10000,
+  terminalType: 'screen-256color',
+  focusEvents: true,
+  clipboard: true,
+  displayPanesTime: 2000,
+  repeatTime: 500,
+  aggressiveResize: true,
   theme: null,
   paneBorder: false,
   activeBorder: true,
@@ -40,6 +50,7 @@ const tmuxAnswers = {
   statusJustify: 'centre',
   splitKeys: null,
   extraBindings: [],
+  plugins: [],
 };
 
 // ── Tool Selection ────────────────────────────────────
@@ -148,6 +159,10 @@ function goToStart() {
   answers.timeFormat = '%H:%M';
   answers.cmdDurationMinTime = 2000;
   answers.rightPromptModules = [];
+  answers.gitShowStash = false;
+  answers.gitBranchTruncation = 20;
+  answers.pythonShowVenv = true;
+  answers.memoryThreshold = 75;
 
   // Reset tmux answers
   tmuxAnswers.prefix = null;
@@ -157,6 +172,12 @@ function goToStart() {
   tmuxAnswers.autoRename = false;
   tmuxAnswers.visualBell = true;
   tmuxAnswers.historyLimit = 10000;
+  tmuxAnswers.terminalType = 'screen-256color';
+  tmuxAnswers.focusEvents = true;
+  tmuxAnswers.clipboard = true;
+  tmuxAnswers.displayPanesTime = 2000;
+  tmuxAnswers.repeatTime = 500;
+  tmuxAnswers.aggressiveResize = true;
   tmuxAnswers.theme = null;
   tmuxAnswers.paneBorder = false;
   tmuxAnswers.activeBorder = true;
@@ -168,6 +189,7 @@ function goToStart() {
   tmuxAnswers.statusJustify = 'centre';
   tmuxAnswers.splitKeys = null;
   tmuxAnswers.extraBindings = [];
+  tmuxAnswers.plugins = [];
 
   document.querySelectorAll('.option.selected').forEach(o => o.classList.remove('selected'));
   document.querySelectorAll('.color-swatch.selected').forEach(o => o.classList.remove('selected'));
@@ -187,6 +209,9 @@ function goToStart() {
     'tmux-visual-bell': true,
     'tmux-pane-border': false,
     'tmux-active-border': true,
+    'tmux-focus-events': true,
+    'tmux-clipboard': true,
+    'tmux-aggressive-resize': true,
   };
   for (const [id, defaultVal] of Object.entries(tmuxToggles)) {
     const el = document.getElementById(id);
@@ -198,6 +223,8 @@ function goToStart() {
     'tmux-status-interval': { value: 5, display: 'tmux-status-interval-val', suffix: '秒' },
     'tmux-status-left-length': { value: 40, display: 'tmux-status-left-length-val', suffix: '' },
     'tmux-status-right-length': { value: 50, display: 'tmux-status-right-length-val', suffix: '' },
+    'tmux-display-panes-time': { value: 2000, display: 'tmux-display-panes-time-val', suffix: 'ms' },
+    'tmux-repeat-time': { value: 500, display: 'tmux-repeat-time-val', suffix: 'ms' },
   };
   for (const [id, cfg] of Object.entries(tmuxRanges)) {
     const el = document.getElementById(id);
@@ -208,6 +235,9 @@ function goToStart() {
 
   const tmuxJustify = document.getElementById('tmux-status-justify');
   if (tmuxJustify) tmuxJustify.value = 'centre';
+
+  const tmuxTerminalType = document.getElementById('tmux-terminal-type');
+  if (tmuxTerminalType) tmuxTerminalType.value = 'screen-256color';
 
   // Go back to tool selection
   goBackToToolSelection();
@@ -448,6 +478,50 @@ function setupTmuxListeners() {
       tmuxAnswers.statusJustify = tmuxStatusJustify.value;
     });
   }
+
+  const tmuxTerminalType = document.getElementById('tmux-terminal-type');
+  if (tmuxTerminalType) {
+    tmuxTerminalType.addEventListener('change', () => {
+      tmuxAnswers.terminalType = tmuxTerminalType.value;
+    });
+  }
+
+  const tmuxFocusEvents = document.getElementById('tmux-focus-events');
+  if (tmuxFocusEvents) {
+    tmuxFocusEvents.addEventListener('change', () => {
+      tmuxAnswers.focusEvents = tmuxFocusEvents.checked;
+    });
+  }
+
+  const tmuxClipboard = document.getElementById('tmux-clipboard');
+  if (tmuxClipboard) {
+    tmuxClipboard.addEventListener('change', () => {
+      tmuxAnswers.clipboard = tmuxClipboard.checked;
+    });
+  }
+
+  const tmuxAggressiveResize = document.getElementById('tmux-aggressive-resize');
+  if (tmuxAggressiveResize) {
+    tmuxAggressiveResize.addEventListener('change', () => {
+      tmuxAnswers.aggressiveResize = tmuxAggressiveResize.checked;
+    });
+  }
+
+  const tmuxDisplayPanesTime = document.getElementById('tmux-display-panes-time');
+  if (tmuxDisplayPanesTime) {
+    tmuxDisplayPanesTime.addEventListener('input', () => {
+      tmuxAnswers.displayPanesTime = parseInt(tmuxDisplayPanesTime.value, 10);
+      document.getElementById('tmux-display-panes-time-val').textContent = tmuxDisplayPanesTime.value + 'ms';
+    });
+  }
+
+  const tmuxRepeatTime = document.getElementById('tmux-repeat-time');
+  if (tmuxRepeatTime) {
+    tmuxRepeatTime.addEventListener('input', () => {
+      tmuxAnswers.repeatTime = parseInt(tmuxRepeatTime.value, 10);
+      document.getElementById('tmux-repeat-time-val').textContent = tmuxRepeatTime.value + 'ms';
+    });
+  }
 }
 
 function updateTmuxNextButton(stepIndex) {
@@ -495,6 +569,68 @@ function buildDetailSettings() {
   `;
   container.appendChild(dirSection);
 
+  // Git settings (only if git module selected)
+  if (modules.includes('git')) {
+    const gitSection = document.createElement('div');
+    gitSection.className = 'detail-section';
+    gitSection.innerHTML = `
+      <h3>Git 設定</h3>
+      <div class="detail-row">
+        <label for="git-branch-trunc">ブランチ名の最大文字数</label>
+        <div class="detail-control">
+          <input type="range" id="git-branch-trunc" min="5" max="50" value="${answers.gitBranchTruncation}">
+          <span id="git-branch-trunc-val">${answers.gitBranchTruncation}</span>
+        </div>
+      </div>
+      <div class="detail-row">
+        <label for="git-show-stash">スタッシュ数を表示</label>
+        <div class="detail-control">
+          <label class="toggle">
+            <input type="checkbox" id="git-show-stash" ${answers.gitShowStash ? 'checked' : ''}>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+    `;
+    container.appendChild(gitSection);
+  }
+
+  // Python settings (only if python module selected)
+  if (modules.includes('python')) {
+    const pySection = document.createElement('div');
+    pySection.className = 'detail-section';
+    pySection.innerHTML = `
+      <h3>Python 設定</h3>
+      <div class="detail-row">
+        <label for="python-show-venv">仮想環境名を表示</label>
+        <div class="detail-control">
+          <label class="toggle">
+            <input type="checkbox" id="python-show-venv" ${answers.pythonShowVenv ? 'checked' : ''}>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+    `;
+    container.appendChild(pySection);
+  }
+
+  // Memory settings (only if memory module selected)
+  if (modules.includes('memory')) {
+    const memSection = document.createElement('div');
+    memSection.className = 'detail-section';
+    memSection.innerHTML = `
+      <h3>メモリ使用量</h3>
+      <div class="detail-row">
+        <label for="memory-threshold">表示する閾値 (%)</label>
+        <div class="detail-control">
+          <input type="range" id="memory-threshold" min="0" max="100" step="5" value="${answers.memoryThreshold}">
+          <span id="memory-threshold-val">${answers.memoryThreshold}%</span>
+        </div>
+      </div>
+    `;
+    container.appendChild(memSection);
+  }
+
   // Time format (only if time module selected)
   if (modules.includes('time')) {
     const timeSection = document.createElement('div');
@@ -541,11 +677,13 @@ function buildDetailSettings() {
     container.appendChild(durationSection);
   }
 
-  // Right prompt (only if time or battery selected)
+  // Right prompt
   const rightCandidates = [];
   if (modules.includes('time')) rightCandidates.push({ value: 'time', label: '時刻' });
   if (modules.includes('battery')) rightCandidates.push({ value: 'battery', label: 'バッテリー' });
   if (modules.includes('cmd_duration')) rightCandidates.push({ value: 'cmd_duration', label: 'コマンド実行時間' });
+  if (modules.includes('jobs')) rightCandidates.push({ value: 'jobs', label: 'ジョブ数' });
+  if (modules.includes('memory')) rightCandidates.push({ value: 'memory', label: 'メモリ使用量' });
 
   if (rightCandidates.length > 0) {
     const rightSection = document.createElement('div');
@@ -594,6 +732,36 @@ function setupDetailListeners() {
   if (truncRepo) {
     truncRepo.addEventListener('change', () => {
       answers.dirTruncateToRepo = truncRepo.checked;
+    });
+  }
+
+  const gitBranchTrunc = document.getElementById('git-branch-trunc');
+  if (gitBranchTrunc) {
+    gitBranchTrunc.addEventListener('input', () => {
+      answers.gitBranchTruncation = parseInt(gitBranchTrunc.value, 10);
+      document.getElementById('git-branch-trunc-val').textContent = gitBranchTrunc.value;
+    });
+  }
+
+  const gitShowStash = document.getElementById('git-show-stash');
+  if (gitShowStash) {
+    gitShowStash.addEventListener('change', () => {
+      answers.gitShowStash = gitShowStash.checked;
+    });
+  }
+
+  const pythonShowVenv = document.getElementById('python-show-venv');
+  if (pythonShowVenv) {
+    pythonShowVenv.addEventListener('change', () => {
+      answers.pythonShowVenv = pythonShowVenv.checked;
+    });
+  }
+
+  const memoryThreshold = document.getElementById('memory-threshold');
+  if (memoryThreshold) {
+    memoryThreshold.addEventListener('input', () => {
+      answers.memoryThreshold = parseInt(memoryThreshold.value, 10);
+      document.getElementById('memory-threshold-val').textContent = memoryThreshold.value + '%';
     });
   }
 
@@ -668,6 +836,8 @@ function generateConfig() {
   // Right prompt
   if (rightModules.length > 0) {
     const rightParts = [];
+    if (rightModules.includes('jobs')) rightParts.push('$jobs');
+    if (rightModules.includes('memory')) rightParts.push('$memory_usage');
     if (rightModules.includes('cmd_duration')) rightParts.push('$cmd_duration');
     if (rightModules.includes('time')) rightParts.push('$time');
     if (rightModules.includes('battery')) rightParts.push('$battery');
@@ -697,16 +867,22 @@ function generateConfig() {
       lines.push('format = "[[$symbol$branch](bold purple)]($style) "');
     }
     lines.push('style = "bold purple"');
+    lines.push(`truncation_length = ${answers.gitBranchTruncation}`);
     lines.push('');
 
     lines.push('[git_status]');
     lines.push('style = "bold red"');
+    if (answers.gitShowStash) {
+      lines.push('stashed = "📦 "');
+    }
     if (style === 'nerd') {
       lines.push('conflicted = " "');
       lines.push('ahead = " ${count} "');
       lines.push('behind = " ${count} "');
       lines.push('untracked = " "');
-      lines.push('stashed = " "');
+      if (answers.gitShowStash) {
+        lines.push('stashed = " ${count} "');
+      }
       lines.push('modified = " "');
       lines.push('staged = " "');
       lines.push('deleted = " "');
@@ -731,6 +907,9 @@ function generateConfig() {
     }
     lines.push('style = "bold yellow"');
     lines.push('detect_extensions = ["py"]');
+    if (!answers.pythonShowVenv) {
+      lines.push('format = "via [${symbol}${pyenv_prefix}(${version})]($style) "');
+    }
     lines.push('');
   }
 
@@ -789,6 +968,79 @@ function generateConfig() {
     lines.push('');
   }
 
+  if (modules.includes('java')) {
+    lines.push('[java]');
+    if (style === 'nerd') {
+      lines.push('symbol = " "');
+    }
+    lines.push('style = "bold red"');
+    lines.push('');
+  }
+
+  if (modules.includes('ruby')) {
+    lines.push('[ruby]');
+    if (style === 'nerd') {
+      lines.push('symbol = " "');
+    }
+    lines.push('style = "bold red"');
+    lines.push('');
+  }
+
+  if (modules.includes('php')) {
+    lines.push('[php]');
+    if (style === 'nerd') {
+      lines.push('symbol = " "');
+    }
+    lines.push('style = "bold purple"');
+    lines.push('');
+  }
+
+  if (modules.includes('package')) {
+    lines.push('[package]');
+    lines.push('disabled = false');
+    if (style === 'nerd') {
+      lines.push('symbol = "📦 "');
+    }
+    lines.push('style = "bold 208"');
+    lines.push('');
+  }
+
+  if (modules.includes('hostname')) {
+    lines.push('[hostname]');
+    lines.push('ssh_only = true');
+    lines.push('style = "bold green"');
+    lines.push('');
+  }
+
+  if (modules.includes('username')) {
+    lines.push('[username]');
+    lines.push('show_always = false');
+    lines.push('style_user = "bold yellow"');
+    lines.push('style_root = "bold red"');
+    lines.push('');
+  }
+
+  if (modules.includes('jobs')) {
+    lines.push('[jobs]');
+    if (style === 'nerd') {
+      lines.push('symbol = " "');
+    }
+    lines.push('style = "bold blue"');
+    lines.push('threshold = 1');
+    lines.push('');
+  }
+
+  if (modules.includes('memory')) {
+    lines.push('[memory_usage]');
+    lines.push('disabled = false');
+    if (style === 'nerd') {
+      lines.push('symbol = "󰍛 "');
+    }
+    lines.push('style = "bold dimmed white"');
+    lines.push(`threshold = ${answers.memoryThreshold}`);
+    lines.push('');
+  }
+
   if (modules.includes('time')) {
     lines.push('[time]');
     lines.push('disabled = false');
@@ -824,35 +1076,47 @@ function generateConfig() {
 function buildFormatParts(style, modules) {
   const parts = [];
 
+  // Prefix modules (username@hostname before directory)
+  const addPrefixModules = (p) => {
+    if (modules.includes('username')) p.push('$username');
+    if (modules.includes('hostname')) p.push('$hostname');
+  };
+
+  // Suffix info modules (after language/cloud modules)
+  const addSuffixModules = (p) => {
+    if (modules.includes('jobs')) p.push('$jobs');
+    if (modules.includes('memory')) p.push('$memory_usage');
+    if (modules.includes('cmd_duration')) p.push('$cmd_duration');
+    if (modules.includes('time')) p.push('$time');
+    if (modules.includes('battery')) p.push('$battery');
+  };
+
   if (style === 'multiline') {
     // Line 1: info
+    addPrefixModules(parts);
     parts.push('$directory');
     if (modules.includes('git')) parts.push('$git_branch$git_status');
     addModuleVars(parts, modules);
-    if (modules.includes('cmd_duration')) parts.push('$cmd_duration');
-    if (modules.includes('time')) parts.push('$time');
-    if (modules.includes('battery')) parts.push('$battery');
+    addSuffixModules(parts);
     parts.push('\\n');
     // Line 2: prompt
     parts.push('$character');
   } else if (style === 'bracket') {
+    addPrefixModules(parts);
     parts.push('\\[');
     parts.push('$directory');
     parts.push('\\] ');
     if (modules.includes('git')) parts.push('$git_branch$git_status');
     addModuleVars(parts, modules);
-    if (modules.includes('cmd_duration')) parts.push('$cmd_duration');
-    if (modules.includes('time')) parts.push('$time');
-    if (modules.includes('battery')) parts.push('$battery');
+    addSuffixModules(parts);
     parts.push('$character');
   } else {
     // plain / nerd
+    addPrefixModules(parts);
     parts.push('$directory');
     if (modules.includes('git')) parts.push('$git_branch$git_status');
     addModuleVars(parts, modules);
-    if (modules.includes('cmd_duration')) parts.push('$cmd_duration');
-    if (modules.includes('time')) parts.push('$time');
-    if (modules.includes('battery')) parts.push('$battery');
+    addSuffixModules(parts);
     parts.push('$character');
   }
 
@@ -860,16 +1124,20 @@ function buildFormatParts(style, modules) {
 }
 
 function addModuleVars(parts, modules) {
-  const langModules = ['node', 'python', 'golang', 'rust', 'docker', 'aws', 'kubernetes', 'terraform'];
+  const langModules = ['node', 'python', 'golang', 'rust', 'java', 'ruby', 'php', 'docker', 'aws', 'kubernetes', 'terraform', 'package'];
   const varMap = {
     node: '$nodejs',
     python: '$python',
     golang: '$golang',
     rust: '$rust',
+    java: '$java',
+    ruby: '$ruby',
+    php: '$php',
     docker: '$docker_context',
     aws: '$aws',
     kubernetes: '$kubernetes',
     terraform: '$terraform',
+    package: '$package',
   };
   for (const m of langModules) {
     if (modules.includes(m)) parts.push(varMap[m]);
@@ -937,6 +1205,38 @@ function buildPromptPreview() {
     ? `<span style="color:#bc8cff"> ${style === 'nerd' ? '💠 ' : ''}default</span>`
     : '';
 
+  const javaVer = (modules.includes('java') && !isRight('java'))
+    ? `<span style="color:#f85149"> ${style === 'nerd' ? ' ' : ''}21.0.1</span>`
+    : '';
+
+  const rubyVer = (modules.includes('ruby') && !isRight('ruby'))
+    ? `<span style="color:#f85149"> ${style === 'nerd' ? ' ' : ''}3.3.0</span>`
+    : '';
+
+  const phpVer = (modules.includes('php') && !isRight('php'))
+    ? `<span style="color:#bc8cff"> ${style === 'nerd' ? ' ' : ''}8.3.0</span>`
+    : '';
+
+  const packageVer = (modules.includes('package') && !isRight('package'))
+    ? `<span style="color:#dd6620"> ${style === 'nerd' ? '📦 ' : ''}v1.0.0</span>`
+    : '';
+
+  const hostnameStr = (modules.includes('hostname'))
+    ? `<span style="color:#3fb950">@myhost</span>`
+    : '';
+
+  const usernameStr = (modules.includes('username'))
+    ? `<span style="color:#d29922">user</span>`
+    : '';
+
+  const jobsPart = (modules.includes('jobs') && !isRight('jobs'))
+    ? `<span style="color:#58a6ff"> ${style === 'nerd' ? ' ' : ''}1</span>`
+    : '';
+
+  const memoryPart = (modules.includes('memory') && !isRight('memory'))
+    ? `<span style="color:#8b949e"> ${style === 'nerd' ? '󰍛 ' : ''}52%</span>`
+    : '';
+
   // Build time string based on format
   let timeStr = '14:30';
   if (answers.timeFormat === '%H:%M:%S') timeStr = '14:30:05';
@@ -956,20 +1256,28 @@ function buildPromptPreview() {
 
   const charSpan = `<span style="color:${hex};font-weight:bold">${character === 'custom' && answers.customCharacter ? answers.customCharacter : character}</span>`;
 
-  const langModules = nodeVer + pythonVer + goVer + rustVer + dockerCtx + awsProfile + k8sCtx + tfWorkspace;
+  const allLangModules = nodeVer + pythonVer + goVer + rustVer + javaVer + rubyVer + phpVer + dockerCtx + awsProfile + k8sCtx + tfWorkspace + packageVer;
+  const prefixPart = (usernameStr || hostnameStr) ? `${usernameStr}${hostnameStr} ` : '';
+  const infoPart = jobsPart + memoryPart;
 
   // Left prompt
   let preview = '';
   if (style === 'multiline') {
-    preview = `${dir} ${gitBranch}${gitStatus}${langModules} ${durationPart}${timePart}${batteryPart}\n${charSpan} `;
+    preview = `${prefixPart}${dir} ${gitBranch}${gitStatus}${allLangModules}${infoPart} ${durationPart}${timePart}${batteryPart}\n${charSpan} `;
   } else if (style === 'bracket') {
-    preview = `[${dir}] ${gitBranch}${gitStatus}${langModules} ${durationPart}${timePart}${batteryPart}${charSpan} `;
+    preview = `${prefixPart}[${dir}] ${gitBranch}${gitStatus}${allLangModules}${infoPart} ${durationPart}${timePart}${batteryPart}${charSpan} `;
   } else {
-    preview = `${dir} ${gitBranch}${gitStatus}${langModules} ${durationPart}${timePart}${batteryPart}${charSpan} `;
+    preview = `${prefixPart}${dir} ${gitBranch}${gitStatus}${allLangModules}${infoPart} ${durationPart}${timePart}${batteryPart}${charSpan} `;
   }
 
   // Right prompt
   const rightParts = [];
+  if (modules.includes('jobs') && isRight('jobs')) {
+    rightParts.push(`<span style="color:#58a6ff">${style === 'nerd' ? ' ' : ''}1</span>`);
+  }
+  if (modules.includes('memory') && isRight('memory')) {
+    rightParts.push(`<span style="color:#8b949e">${style === 'nerd' ? '󰍛 ' : ''}52%</span>`);
+  }
   if (modules.includes('cmd_duration') && isRight('cmd_duration')) {
     rightParts.push(`<span style="color:#d29922">took 3s</span>`);
   }
@@ -1069,11 +1377,22 @@ function generateTmuxConfig() {
   }
   lines.push('set -g escape-time 10');
   lines.push(`set -g history-limit ${tmuxAnswers.historyLimit}`);
+  if (tmuxAnswers.focusEvents) {
+    lines.push('set -g focus-events on');
+  }
+  if (tmuxAnswers.clipboard) {
+    lines.push('set -g set-clipboard on');
+  }
+  if (tmuxAnswers.aggressiveResize) {
+    lines.push('setw -g aggressive-resize on');
+  }
+  lines.push(`set -g display-panes-time ${tmuxAnswers.displayPanesTime}`);
+  lines.push(`set -g repeat-time ${tmuxAnswers.repeatTime}`);
   lines.push('');
 
   // Colors
   lines.push('# Colors');
-  lines.push('set -g default-terminal "screen-256color"');
+  lines.push(`set -g default-terminal "${tmuxAnswers.terminalType}"`);
   lines.push('');
 
   // Theme
@@ -1108,14 +1427,26 @@ function generateTmuxConfig() {
   if (tmuxAnswers.statusModules.includes('session')) {
     leftParts.push('[#S]');
   }
+  if (tmuxAnswers.statusModules.includes('pane-count')) {
+    leftParts.push('[#{window_panes}P]');
+  }
+  if (tmuxAnswers.statusModules.includes('git')) {
+    rightParts.push('#(cd #{pane_current_path}; git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "-")');
+  }
   if (tmuxAnswers.statusModules.includes('hostname')) {
     rightParts.push('#H');
+  }
+  if (tmuxAnswers.statusModules.includes('battery')) {
+    rightParts.push('#(cat /sys/class/power_supply/BAT0/capacity 2>/dev/null || pmset -g batt 2>/dev/null | grep -o "[0-9]*%" || echo "N/A")%%');
   }
   if (tmuxAnswers.statusModules.includes('datetime')) {
     rightParts.push('%Y-%m-%d %H:%M');
   }
   if (tmuxAnswers.statusModules.includes('load')) {
     rightParts.push('#(uptime | cut -d "," -f 3-)');
+  }
+  if (tmuxAnswers.statusModules.includes('uptime')) {
+    rightParts.push('#(uptime | sed "s/.*up/up/" | sed "s/,.*user.*//" | xargs)');
   }
 
   if (leftParts.length > 0) {
@@ -1200,7 +1531,64 @@ function generateTmuxConfig() {
       lines.push('bind t new-window');
     }
 
+    if (extraBindings.includes('session-switch')) {
+      lines.push('# Session switching');
+      lines.push('bind ( switch-client -p');
+      lines.push('bind ) switch-client -n');
+    }
+
+    if (extraBindings.includes('layout-cycle')) {
+      lines.push('# Cycle through layouts');
+      lines.push('bind Space next-layout');
+    }
+
+    if (extraBindings.includes('zoom-pane')) {
+      lines.push('# Zoom pane toggle');
+      lines.push('bind z resize-pane -Z');
+    }
+
+    if (extraBindings.includes('kill-pane')) {
+      lines.push('# Kill pane/window without confirmation');
+      lines.push('bind x kill-pane');
+      lines.push('bind X kill-window');
+    }
+
+    if (extraBindings.includes('clear-history')) {
+      lines.push('# Clear screen and scrollback');
+      lines.push('bind C-l send-keys C-l \\; clear-history');
+    }
+
     lines.push('');
+  }
+
+  // Plugins
+  const plugins = tmuxAnswers.plugins;
+  if (plugins.length > 0) {
+    lines.push('# Plugins (tpm)');
+
+    if (plugins.includes('tpm')) {
+      lines.push('set -g @plugin \'tmux-plugins/tpm\'');
+    }
+    if (plugins.includes('sensible')) {
+      lines.push('set -g @plugin \'tmux-plugins/tmux-sensible\'');
+    }
+    if (plugins.includes('resurrect')) {
+      lines.push('set -g @plugin \'tmux-plugins/tmux-resurrect\'');
+    }
+    if (plugins.includes('continuum')) {
+      lines.push('set -g @plugin \'tmux-plugins/tmux-continuum\'');
+      lines.push('set -g @continuum-restore \'on\'');
+    }
+    if (plugins.includes('yank')) {
+      lines.push('set -g @plugin \'tmux-plugins/tmux-yank\'');
+    }
+    lines.push('');
+
+    if (plugins.includes('tpm')) {
+      lines.push('# Initialize tpm (keep this line at the very bottom)');
+      lines.push('run \'~/.tmux/plugins/tpm/tpm\'');
+      lines.push('');
+    }
   }
 
   return lines.join('\n');
@@ -1239,6 +1627,30 @@ function getThemeColors(theme) {
       border: '#30363d',
       activeBg: '#dd6620',
       activeFg: '#ffffff',
+    },
+    tokyonight: {
+      statusBg: '#1a1b26',
+      statusFg: '#c0caf5',
+      activeBorder: '#7aa2f7',
+      border: '#3b4261',
+      activeBg: '#7aa2f7',
+      activeFg: '#1a1b26',
+    },
+    catppuccin: {
+      statusBg: '#1e1e2e',
+      statusFg: '#cdd6f4',
+      activeBorder: '#cba6f7',
+      border: '#45475a',
+      activeBg: '#cba6f7',
+      activeFg: '#1e1e2e',
+    },
+    solarized: {
+      statusBg: '#002b36',
+      statusFg: '#839496',
+      activeBorder: '#268bd2',
+      border: '#073642',
+      activeBg: '#268bd2',
+      activeFg: '#fdf6e3',
     },
   };
   return themes[theme] || themes.github;
