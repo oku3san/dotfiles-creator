@@ -1,20 +1,20 @@
-// ── State ──────────────────────────────────────────────
-let selectedTool = null; // 'starship', 'tmux', 'zsh', or 'neovim'
-const TOTAL_STEPS = 6;
-const TMUX_TOTAL_STEPS = 5;
-const ZSH_TOTAL_STEPS = 5;
-const NEOVIM_TOTAL_STEPS = 5;
-let currentStep = 0;
+// ── Helpers ────────────────────────────────────────────
+function kebabToCamel(str) {
+  return str.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+}
 
-// Starship answers
-const answers = {
+function deepClone(obj) {
+  return JSON.parse(JSON.stringify(obj));
+}
+
+// ── Default State ─────────────────────────────────────
+const STARSHIP_DEFAULTS = {
   style: null,
   character: null,
   customCharacter: '',
   color: null,
   customColor: '',
   modules: [],
-  // Detail settings
   dirTruncationLength: 3,
   dirTruncateToRepo: true,
   timeFormat: '%H:%M',
@@ -26,8 +26,7 @@ const answers = {
   memoryThreshold: 75,
 };
 
-// tmux answers
-const tmuxAnswers = {
+const TMUX_DEFAULTS = {
   prefix: null,
   mouse: true,
   baseIndex: true,
@@ -55,8 +54,7 @@ const tmuxAnswers = {
   plugins: [],
 };
 
-// zsh answers
-const zshAnswers = {
+const ZSH_DEFAULTS = {
   pluginManager: null,
   historySize: 10000,
   saveHistory: 10000,
@@ -70,8 +68,7 @@ const zshAnswers = {
   aliases: [],
 };
 
-// Neovim answers
-const neovimAnswers = {
+const NEOVIM_DEFAULTS = {
   pluginManager: null,
   number: true,
   relativenumber: true,
@@ -98,38 +95,45 @@ const neovimAnswers = {
   keymaps: [],
 };
 
+// ── State ──────────────────────────────────────────────
+let selectedTool = null;
+let currentStep = 0;
+const answers = deepClone(STARSHIP_DEFAULTS);
+const tmuxAnswers = deepClone(TMUX_DEFAULTS);
+const zshAnswers = deepClone(ZSH_DEFAULTS);
+const neovimAnswers = deepClone(NEOVIM_DEFAULTS);
+
+// ── Tool Registry ─────────────────────────────────────
+const TOOL_CONFIG = {
+  starship: { totalSteps: 6, stepClass: '.starship-step', stepPrefix: 'step-', state: answers, onStep: { 4: buildDetailSettings, 5: renderResult } },
+  tmux:     { totalSteps: 5, stepClass: '.tmux-step',     stepPrefix: 'tmux-step-', state: tmuxAnswers, onStep: { 4: renderTmuxResult } },
+  zsh:      { totalSteps: 5, stepClass: '.zsh-step',      stepPrefix: 'zsh-step-', state: zshAnswers, onStep: { 2: buildZshPluginsSection, 4: renderZshResult } },
+  neovim:   { totalSteps: 5, stepClass: '.neovim-step',   stepPrefix: 'neovim-step-', state: neovimAnswers, onStep: { 2: buildNeovimPluginsSection, 4: renderNeovimResult } },
+};
+
+function getToolState(dataKey) {
+  if (dataKey.startsWith('tmux-')) return { state: tmuxAnswers, key: kebabToCamel(dataKey.replace('tmux-', '')) };
+  if (dataKey.startsWith('zsh-')) return { state: zshAnswers, key: kebabToCamel(dataKey.replace('zsh-', '')) };
+  if (dataKey.startsWith('neovim-')) return { state: neovimAnswers, key: kebabToCamel(dataKey.replace('neovim-', '')) };
+  return { state: answers, key: dataKey };
+}
+
 // ── Tool Selection ────────────────────────────────────
 function selectTool() {
-  const toolOption = document.querySelector('.option[data-value="starship"].selected') ||
-                      document.querySelector('.option[data-value="tmux"].selected') ||
-                      document.querySelector('.option[data-value="zsh"].selected') ||
-                      document.querySelector('.option[data-value="neovim"].selected');
+  const toolOption = document.querySelector('#step-tool-selection .option.selected');
   if (!toolOption) return;
 
   selectedTool = toolOption.dataset.value;
-
-  // Hide tool selection
   document.getElementById('step-tool-selection').classList.remove('visible');
 
-  // Show appropriate steps (clear inline styles so CSS classes control visibility)
-  const allStepClasses = ['.starship-step', '.tmux-step', '.zsh-step', '.neovim-step'];
+  const allStepClasses = Object.values(TOOL_CONFIG).map(c => c.stepClass);
   allStepClasses.forEach(cls => {
     document.querySelectorAll(cls).forEach(s => s.style.display = 'none');
   });
 
-  if (selectedTool === 'starship') {
-    document.querySelectorAll('.starship-step').forEach(s => s.style.display = '');
-    showStep(0);
-  } else if (selectedTool === 'tmux') {
-    document.querySelectorAll('.tmux-step').forEach(s => s.style.display = '');
-    showTmuxStep(0);
-  } else if (selectedTool === 'zsh') {
-    document.querySelectorAll('.zsh-step').forEach(s => s.style.display = '');
-    showZshStep(0);
-  } else if (selectedTool === 'neovim') {
-    document.querySelectorAll('.neovim-step').forEach(s => s.style.display = '');
-    showNeovimStep(0);
-  }
+  const config = TOOL_CONFIG[selectedTool];
+  document.querySelectorAll(config.stepClass).forEach(s => s.style.display = '');
+  showToolStep(0);
 }
 
 function goBackToToolSelection() {
@@ -144,11 +148,9 @@ function goBackToToolSelection() {
 function renderProgress() {
   const bar = document.getElementById('progress');
   bar.innerHTML = '';
-  let totalSteps = TOTAL_STEPS;
-  if (selectedTool === 'tmux') totalSteps = TMUX_TOTAL_STEPS;
-  if (selectedTool === 'zsh') totalSteps = ZSH_TOTAL_STEPS;
-  if (selectedTool === 'neovim') totalSteps = NEOVIM_TOTAL_STEPS;
-  for (let i = 0; i < totalSteps; i++) {
+  const config = TOOL_CONFIG[selectedTool];
+  if (!config) return;
+  for (let i = 0; i < config.totalSteps; i++) {
     const el = document.createElement('div');
     el.className = 'progress-step';
     if (i < currentStep) el.classList.add('done');
@@ -158,153 +160,47 @@ function renderProgress() {
 }
 
 // ── Step navigation ───────────────────────────────────
-function showStep(index) {
-  document.querySelectorAll('.starship-step').forEach((s, i) => {
+function showToolStep(index) {
+  const config = TOOL_CONFIG[selectedTool];
+  if (!config) return;
+  document.querySelectorAll(config.stepClass).forEach((s, i) => {
     s.classList.toggle('visible', i === index);
   });
   currentStep = index;
   renderProgress();
 
-  // Build detail settings when entering step 4
-  if (index === 4) {
-    buildDetailSettings();
-  }
-
-  if (index === TOTAL_STEPS - 1) {
-    renderResult();
-  }
-}
-
-function showTmuxStep(index) {
-  document.querySelectorAll('.tmux-step').forEach((s, i) => {
-    s.classList.toggle('visible', i === index);
-  });
-  currentStep = index;
-  renderProgress();
-
-  if (index === TMUX_TOTAL_STEPS - 1) {
-    renderTmuxResult();
-  }
-}
-
-function showZshStep(index) {
-  document.querySelectorAll('.zsh-step').forEach((s, i) => {
-    s.classList.toggle('visible', i === index);
-  });
-  currentStep = index;
-  renderProgress();
-
-  // Build plugins section when entering step 2
-  if (index === 2) {
-    buildZshPluginsSection();
-  }
-
-  if (index === ZSH_TOTAL_STEPS - 1) {
-    renderZshResult();
-  }
-}
-
-function showNeovimStep(index) {
-  document.querySelectorAll('.neovim-step').forEach((s, i) => {
-    s.classList.toggle('visible', i === index);
-  });
-  currentStep = index;
-  renderProgress();
-
-  // Build plugins section when entering step 2
-  if (index === 2) {
-    buildNeovimPluginsSection();
-  }
-
-  if (index === NEOVIM_TOTAL_STEPS - 1) {
-    renderNeovimResult();
-  }
+  const callback = config.onStep[index];
+  if (callback) callback();
 }
 
 function nextStep() {
-  if (selectedTool === 'tmux') {
-    if (currentStep < TMUX_TOTAL_STEPS - 1) showTmuxStep(currentStep + 1);
-  } else if (selectedTool === 'zsh') {
-    if (currentStep < ZSH_TOTAL_STEPS - 1) showZshStep(currentStep + 1);
-  } else if (selectedTool === 'neovim') {
-    if (currentStep < NEOVIM_TOTAL_STEPS - 1) showNeovimStep(currentStep + 1);
-  } else {
-    if (currentStep < TOTAL_STEPS - 1) showStep(currentStep + 1);
+  const config = TOOL_CONFIG[selectedTool];
+  if (config && currentStep < config.totalSteps - 1) {
+    showToolStep(currentStep + 1);
   }
 }
 
 function prevStep() {
   if (currentStep > 0) {
-    if (selectedTool === 'tmux') {
-      showTmuxStep(currentStep - 1);
-    } else if (selectedTool === 'zsh') {
-      showZshStep(currentStep - 1);
-    } else if (selectedTool === 'neovim') {
-      showNeovimStep(currentStep - 1);
-    } else {
-      showStep(currentStep - 1);
-    }
+    showToolStep(currentStep - 1);
+  }
+}
+
+function resetState(target, defaults) {
+  for (const key of Object.keys(defaults)) {
+    const val = defaults[key];
+    target[key] = Array.isArray(val) ? [] : val;
   }
 }
 
 function goToStart() {
-  // Reset starship answers
-  answers.style = null;
-  answers.character = null;
-  answers.customCharacter = '';
-  answers.color = null;
-  answers.customColor = '';
-  answers.modules = [];
-  answers.dirTruncationLength = 3;
-  answers.dirTruncateToRepo = true;
-  answers.timeFormat = '%H:%M';
-  answers.cmdDurationMinTime = 2000;
-  answers.rightPromptModules = [];
-  answers.gitShowStash = false;
-  answers.gitBranchTruncation = 20;
-  answers.pythonShowVenv = true;
-  answers.memoryThreshold = 75;
+  // Reset all answer objects to defaults
+  resetState(answers, STARSHIP_DEFAULTS);
+  resetState(tmuxAnswers, TMUX_DEFAULTS);
+  resetState(zshAnswers, ZSH_DEFAULTS);
+  resetState(neovimAnswers, NEOVIM_DEFAULTS);
 
-  // Reset tmux answers
-  tmuxAnswers.prefix = null;
-  tmuxAnswers.mouse = true;
-  tmuxAnswers.baseIndex = true;
-  tmuxAnswers.renumber = true;
-  tmuxAnswers.autoRename = false;
-  tmuxAnswers.visualBell = true;
-  tmuxAnswers.historyLimit = 10000;
-  tmuxAnswers.terminalType = 'screen-256color';
-  tmuxAnswers.focusEvents = true;
-  tmuxAnswers.clipboard = true;
-  tmuxAnswers.displayPanesTime = 2000;
-  tmuxAnswers.repeatTime = 500;
-  tmuxAnswers.aggressiveResize = true;
-  tmuxAnswers.theme = null;
-  tmuxAnswers.paneBorder = false;
-  tmuxAnswers.activeBorder = true;
-  tmuxAnswers.statusPosition = null;
-  tmuxAnswers.statusModules = [];
-  tmuxAnswers.statusInterval = 5;
-  tmuxAnswers.statusLeftLength = 40;
-  tmuxAnswers.statusRightLength = 50;
-  tmuxAnswers.statusJustify = 'centre';
-  tmuxAnswers.splitKeys = null;
-  tmuxAnswers.extraBindings = [];
-  tmuxAnswers.plugins = [];
-
-  // Reset zsh answers
-  zshAnswers.pluginManager = null;
-  zshAnswers.historySize = 10000;
-  zshAnswers.saveHistory = 10000;
-  zshAnswers.shareHistory = true;
-  zshAnswers.histIgnoreDups = true;
-  zshAnswers.autoMenu = true;
-  zshAnswers.caseSensitive = false;
-  zshAnswers.keymap = null;
-  zshAnswers.theme = null;
-  zshAnswers.plugins = [];
-  zshAnswers.aliases = [];
-
+  // Reset UI selections
   document.querySelectorAll('.option.selected').forEach(o => o.classList.remove('selected'));
   document.querySelectorAll('.color-swatch.selected').forEach(o => o.classList.remove('selected'));
   const customCharInput = document.getElementById('custom-char-input');
@@ -314,261 +210,114 @@ function goToStart() {
   const customColorPreview = document.getElementById('custom-color-preview');
   if (customColorPreview) customColorPreview.style.background = 'transparent';
 
-  // Reset tmux DOM elements
-  const tmuxToggles = {
-    'tmux-mouse': true,
-    'tmux-base-index': true,
-    'tmux-renumber': true,
-    'tmux-auto-rename': false,
-    'tmux-visual-bell': true,
-    'tmux-pane-border': false,
-    'tmux-active-border': true,
-    'tmux-focus-events': true,
-    'tmux-clipboard': true,
-    'tmux-aggressive-resize': true,
-  };
-  for (const [id, defaultVal] of Object.entries(tmuxToggles)) {
+  // Reset all toggle and range DOM elements
+  TOGGLE_BINDINGS.forEach(({ id, defaultVal }) => {
     const el = document.getElementById(id);
     if (el) el.checked = defaultVal;
-  }
+  });
 
-  const tmuxRanges = {
-    'tmux-history-limit': { value: 10000, display: 'tmux-history-limit-val', suffix: '' },
-    'tmux-status-interval': { value: 5, display: 'tmux-status-interval-val', suffix: '秒' },
-    'tmux-status-left-length': { value: 40, display: 'tmux-status-left-length-val', suffix: '' },
-    'tmux-status-right-length': { value: 50, display: 'tmux-status-right-length-val', suffix: '' },
-    'tmux-display-panes-time': { value: 2000, display: 'tmux-display-panes-time-val', suffix: 'ms' },
-    'tmux-repeat-time': { value: 500, display: 'tmux-repeat-time-val', suffix: 'ms' },
-  };
-  for (const [id, cfg] of Object.entries(tmuxRanges)) {
+  RANGE_BINDINGS.forEach(({ id, defaultVal, displayId, suffix }) => {
     const el = document.getElementById(id);
-    if (el) el.value = cfg.value;
-    const display = document.getElementById(cfg.display);
-    if (display) display.textContent = cfg.value + cfg.suffix;
-  }
+    if (el) el.value = defaultVal;
+    const display = document.getElementById(displayId);
+    if (display) display.textContent = defaultVal + suffix;
+  });
 
+  // Reset select elements
   const tmuxJustify = document.getElementById('tmux-status-justify');
   if (tmuxJustify) tmuxJustify.value = 'centre';
-
   const tmuxTerminalType = document.getElementById('tmux-terminal-type');
   if (tmuxTerminalType) tmuxTerminalType.value = 'screen-256color';
 
-  // Reset neovim answers
-  neovimAnswers.pluginManager = null;
-  neovimAnswers.number = true;
-  neovimAnswers.relativenumber = true;
-  neovimAnswers.cursorline = true;
-  neovimAnswers.signcolumn = true;
-  neovimAnswers.wrap = false;
-  neovimAnswers.termguicolors = true;
-  neovimAnswers.scrolloff = 8;
-  neovimAnswers.tabWidth = 2;
-  neovimAnswers.expandtab = true;
-  neovimAnswers.smartindent = true;
-  neovimAnswers.ignorecase = true;
-  neovimAnswers.smartcase = true;
-  neovimAnswers.hlsearch = true;
-  neovimAnswers.clipboard = true;
-  neovimAnswers.mouse = true;
-  neovimAnswers.swapfile = true;
-  neovimAnswers.undofile = true;
-  neovimAnswers.splitright = true;
-  neovimAnswers.splitbelow = true;
-  neovimAnswers.colorscheme = null;
-  neovimAnswers.plugins = [];
-  neovimAnswers.leader = null;
-  neovimAnswers.keymaps = [];
-
-  // Reset zsh DOM elements
-  const zshToggles = {
-    'zsh-share-history': true,
-    'zsh-hist-ignore-dups': true,
-    'zsh-auto-menu': true,
-    'zsh-case-sensitive': false,
-  };
-  for (const [id, defaultVal] of Object.entries(zshToggles)) {
-    const el = document.getElementById(id);
-    if (el) el.checked = defaultVal;
-  }
-
-  const zshRanges = {
-    'zsh-history-size': { value: 10000, display: 'zsh-history-size-val', suffix: '' },
-    'zsh-save-history': { value: 10000, display: 'zsh-save-history-val', suffix: '' },
-  };
-  for (const [id, cfg] of Object.entries(zshRanges)) {
-    const el = document.getElementById(id);
-    if (el) el.value = cfg.value;
-    const display = document.getElementById(cfg.display);
-    if (display) display.textContent = cfg.value + cfg.suffix;
-  }
-
-  // Reset neovim DOM elements
-  const nvimToggles = {
-    'nvim-number': true,
-    'nvim-relativenumber': true,
-    'nvim-cursorline': true,
-    'nvim-signcolumn': true,
-    'nvim-wrap': false,
-    'nvim-termguicolors': true,
-    'nvim-expandtab': true,
-    'nvim-smartindent': true,
-    'nvim-ignorecase': true,
-    'nvim-smartcase': true,
-    'nvim-hlsearch': true,
-    'nvim-clipboard': true,
-    'nvim-mouse': true,
-    'nvim-swapfile': true,
-    'nvim-undofile': true,
-    'nvim-splitright': true,
-    'nvim-splitbelow': true,
-  };
-  for (const [id, defaultVal] of Object.entries(nvimToggles)) {
-    const el = document.getElementById(id);
-    if (el) el.checked = defaultVal;
-  }
-
-  const nvimRanges = {
-    'nvim-scrolloff': { value: 8, display: 'nvim-scrolloff-val', suffix: '' },
-    'nvim-tabwidth': { value: 2, display: 'nvim-tabwidth-val', suffix: '' },
-  };
-  for (const [id, cfg] of Object.entries(nvimRanges)) {
-    const el = document.getElementById(id);
-    if (el) el.value = cfg.value;
-    const display = document.getElementById(cfg.display);
-    if (display) display.textContent = cfg.value + cfg.suffix;
-  }
-
-  // Go back to tool selection
   goBackToToolSelection();
 }
 
-function updateNextButton(stepIndex) {
-  const btn = document.getElementById(`btn-next-${stepIndex}`);
-  if (!btn) return;
-  const stepEl = document.getElementById(`step-${stepIndex}`);
-  const container = stepEl.querySelector('[data-type]');
-  const type = container?.dataset.type;
-  if (type === 'radio' || type === 'color') {
-    const key = container.dataset.key;
-    btn.disabled = answers[key] === null;
-  }
+// ── Next button validation ────────────────────────────
+// Maps step DOM IDs to the state property that must be non-null
+const STEP_REQUIRED_FIELDS = {
+  'step-0': { state: answers, key: 'style' },
+  'step-1': { state: answers, key: 'character' },
+  'step-2': { state: answers, key: 'color' },
+  'tmux-step-0': { state: tmuxAnswers, key: 'prefix' },
+  'tmux-step-1': { state: tmuxAnswers, key: 'theme' },
+  'tmux-step-2': { state: tmuxAnswers, key: 'statusPosition' },
+  'zsh-step-0': { state: zshAnswers, key: 'pluginManager' },
+  'zsh-step-1': { state: zshAnswers, key: 'keymap' },
+  'neovim-step-0': { state: neovimAnswers, key: 'pluginManager' },
+  'neovim-step-2': { state: neovimAnswers, key: 'colorscheme' },
+};
+
+// Maps step DOM IDs to their next-button DOM IDs
+const STEP_BUTTON_MAP = {
+  'step-0': 'btn-next-0',
+  'step-1': 'btn-next-1',
+  'step-2': 'btn-next-2',
+  'tmux-step-0': 'btn-tmux-next-0',
+  'tmux-step-1': 'btn-tmux-next-1',
+  'tmux-step-2': 'btn-tmux-next-2',
+  'zsh-step-0': 'btn-zsh-next-0',
+  'zsh-step-1': 'btn-zsh-next-1',
+  'neovim-step-0': 'btn-neovim-next-0',
+  'neovim-step-2': 'btn-neovim-next-2',
+};
+
+function updateStepButton(stepId) {
+  const btnId = STEP_BUTTON_MAP[stepId];
+  const field = STEP_REQUIRED_FIELDS[stepId];
+  if (!btnId || !field) return;
+  const btn = document.getElementById(btnId);
+  if (btn) btn.disabled = field.state[field.key] === null;
 }
 
 // ── Option click handlers ─────────────────────────────
+function handleRadioClick(container, option) {
+  const key = container.dataset.key;
+  container.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+  option.classList.add('selected');
+
+  if (key === 'tool') {
+    const btn = document.getElementById('btn-select-tool');
+    if (btn) btn.disabled = false;
+    return;
+  }
+
+  const { state, key: stateKey } = getToolState(key);
+  state[stateKey] = option.dataset.value;
+
+  // Clear custom character if a preset is selected for starship character step
+  if (key === 'character') {
+    answers.customCharacter = '';
+    const customInput = document.getElementById('custom-char-input');
+    if (customInput) customInput.value = '';
+  }
+
+  const stepId = option.closest('.step')?.id;
+  if (stepId) updateStepButton(stepId);
+}
+
+function handleCheckboxClick(container, option) {
+  const key = container.dataset.key;
+  option.classList.toggle('selected');
+  const val = option.dataset.value;
+  const { state, key: stateKey } = getToolState(key);
+  const arr = state[stateKey];
+  if (option.classList.contains('selected')) {
+    if (!arr.includes(val)) arr.push(val);
+  } else {
+    state[stateKey] = arr.filter(v => v !== val);
+  }
+}
+
 function setupOptions() {
-  // Radio options
   document.querySelectorAll('.options[data-type="radio"]').forEach(container => {
-    const key = container.dataset.key;
     container.querySelectorAll('.option').forEach(option => {
-      option.addEventListener('click', () => {
-        container.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
-        option.classList.add('selected');
-
-        // Tool selection
-        if (key === 'tool') {
-          const btn = document.getElementById('btn-select-tool');
-          if (btn) btn.disabled = false;
-          return;
-        }
-
-        // tmux options
-        if (key.startsWith('tmux-')) {
-          const tmuxKey = key.replace('tmux-', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-          tmuxAnswers[tmuxKey] = option.dataset.value;
-          const stepEl = option.closest('.step');
-          const stepId = stepEl?.id;
-          if (stepId === 'tmux-step-0') updateTmuxNextButton(0);
-          if (stepId === 'tmux-step-1') updateTmuxNextButton(1);
-          if (stepId === 'tmux-step-2') updateTmuxNextButton(2);
-          return;
-        }
-
-        // zsh options
-        if (key.startsWith('zsh-')) {
-          const zshKey = key.replace('zsh-', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-          zshAnswers[zshKey] = option.dataset.value;
-          const stepEl = option.closest('.step');
-          const stepId = stepEl?.id;
-          if (stepId === 'zsh-step-0') updateZshNextButton(0);
-          if (stepId === 'zsh-step-1') updateZshNextButton(1);
-          return;
-        }
-
-        // neovim options
-        if (key.startsWith('neovim-')) {
-          const nvimKey = key.replace('neovim-', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-          neovimAnswers[nvimKey] = option.dataset.value;
-          const stepEl = option.closest('.step');
-          const stepId = stepEl?.id;
-          if (stepId === 'neovim-step-0') updateNeovimNextButton(0);
-          if (stepId === 'neovim-step-2') updateNeovimNextButton(2);
-          if (stepId === 'neovim-step-3') updateNeovimNextButton(3);
-          return;
-        }
-
-        // Starship options
-        answers[key] = option.dataset.value;
-        // Clear custom character if a preset is selected
-        if (key === 'character' && option.dataset.value !== 'custom') {
-          answers.customCharacter = '';
-          const customInput = document.getElementById('custom-char-input');
-          if (customInput) customInput.value = '';
-        }
-        const stepEl = option.closest('.step');
-        const stepIndex = parseInt(stepEl.id.replace('step-', ''), 10);
-        updateNextButton(stepIndex);
-      });
+      option.addEventListener('click', () => handleRadioClick(container, option));
     });
   });
 
-  // Checkbox options
   document.querySelectorAll('.options[data-type="checkbox"]').forEach(container => {
-    const key = container.dataset.key;
     container.querySelectorAll('.option').forEach(option => {
-      option.addEventListener('click', () => {
-        option.classList.toggle('selected');
-        const val = option.dataset.value;
-
-        // tmux checkboxes
-        if (key.startsWith('tmux-')) {
-          const tmuxKey = key.replace('tmux-', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-          if (option.classList.contains('selected')) {
-            if (!tmuxAnswers[tmuxKey].includes(val)) tmuxAnswers[tmuxKey].push(val);
-          } else {
-            tmuxAnswers[tmuxKey] = tmuxAnswers[tmuxKey].filter(v => v !== val);
-          }
-          return;
-        }
-
-        // zsh checkboxes
-        if (key.startsWith('zsh-')) {
-          const zshKey = key.replace('zsh-', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-          if (option.classList.contains('selected')) {
-            if (!zshAnswers[zshKey].includes(val)) zshAnswers[zshKey].push(val);
-          } else {
-            zshAnswers[zshKey] = zshAnswers[zshKey].filter(v => v !== val);
-          }
-          return;
-        }
-
-        // neovim checkboxes
-        if (key.startsWith('neovim-')) {
-          const nvimKey = key.replace('neovim-', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-          if (option.classList.contains('selected')) {
-            if (!neovimAnswers[nvimKey].includes(val)) neovimAnswers[nvimKey].push(val);
-          } else {
-            neovimAnswers[nvimKey] = neovimAnswers[nvimKey].filter(v => v !== val);
-          }
-          return;
-        }
-
-        // Starship checkboxes
-        if (option.classList.contains('selected')) {
-          if (!answers[key].includes(val)) answers[key].push(val);
-        } else {
-          answers[key] = answers[key].filter(v => v !== val);
-        }
-      });
+      option.addEventListener('click', () => handleCheckboxClick(container, option));
     });
   });
 
@@ -585,9 +334,8 @@ function setupOptions() {
         if (customInput) customInput.value = '#';
         const customPreview = document.getElementById('custom-color-preview');
         if (customPreview) customPreview.style.background = 'transparent';
-        const stepEl = swatch.closest('.step');
-        const stepIndex = parseInt(stepEl.id.replace('step-', ''), 10);
-        updateNextButton(stepIndex);
+        const stepId = swatch.closest('.step')?.id;
+        if (stepId) updateStepButton(stepId);
       });
     });
   });
@@ -600,12 +348,9 @@ function setupOptions() {
       if (val) {
         answers.character = 'custom';
         answers.customCharacter = val;
-        // Deselect preset options
         const container = customCharInput.closest('.step').querySelector('.options[data-type="radio"]');
-        if (container) {
-          container.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
-        }
-        updateNextButton(1);
+        if (container) container.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+        updateStepButton('step-1');
       }
     });
   }
@@ -620,229 +365,97 @@ function setupOptions() {
         answers.color = val;
         answers.customColor = val;
         if (customPreview) customPreview.style.background = val;
-        // Deselect preset swatches
         document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
-        updateNextButton(2);
+        updateStepButton('step-2');
       } else {
         if (customPreview) customPreview.style.background = 'transparent';
       }
     });
   }
 
-  // tmux specific listeners
-  setupTmuxListeners();
-
-  // zsh specific listeners
-  setupZshListeners();
-
-  // neovim specific listeners
-  setupNeovimListeners();
+  // Toggle and range listeners (data-driven)
+  setupToggleAndRangeListeners();
 }
 
-// ── tmux option listeners ─────────────────────────────
-function setupTmuxListeners() {
-  const tmuxMouse = document.getElementById('tmux-mouse');
-  if (tmuxMouse) {
-    tmuxMouse.addEventListener('change', () => {
-      tmuxAnswers.mouse = tmuxMouse.checked;
-    });
-  }
+// ── Toggle and range binding definitions ──────────────
+const TOGGLE_BINDINGS = [
+  // tmux toggles
+  { id: 'tmux-mouse', state: tmuxAnswers, key: 'mouse', defaultVal: true },
+  { id: 'tmux-base-index', state: tmuxAnswers, key: 'baseIndex', defaultVal: true },
+  { id: 'tmux-renumber', state: tmuxAnswers, key: 'renumber', defaultVal: true },
+  { id: 'tmux-auto-rename', state: tmuxAnswers, key: 'autoRename', defaultVal: false },
+  { id: 'tmux-visual-bell', state: tmuxAnswers, key: 'visualBell', defaultVal: true },
+  { id: 'tmux-pane-border', state: tmuxAnswers, key: 'paneBorder', defaultVal: false },
+  { id: 'tmux-active-border', state: tmuxAnswers, key: 'activeBorder', defaultVal: true },
+  { id: 'tmux-focus-events', state: tmuxAnswers, key: 'focusEvents', defaultVal: true },
+  { id: 'tmux-clipboard', state: tmuxAnswers, key: 'clipboard', defaultVal: true },
+  { id: 'tmux-aggressive-resize', state: tmuxAnswers, key: 'aggressiveResize', defaultVal: true },
+  // zsh toggles
+  { id: 'zsh-share-history', state: zshAnswers, key: 'shareHistory', defaultVal: true },
+  { id: 'zsh-hist-ignore-dups', state: zshAnswers, key: 'histIgnoreDups', defaultVal: true },
+  { id: 'zsh-auto-menu', state: zshAnswers, key: 'autoMenu', defaultVal: true },
+  { id: 'zsh-case-sensitive', state: zshAnswers, key: 'caseSensitive', defaultVal: false },
+  // neovim toggles
+  { id: 'nvim-number', state: neovimAnswers, key: 'number', defaultVal: true },
+  { id: 'nvim-relativenumber', state: neovimAnswers, key: 'relativenumber', defaultVal: true },
+  { id: 'nvim-cursorline', state: neovimAnswers, key: 'cursorline', defaultVal: true },
+  { id: 'nvim-signcolumn', state: neovimAnswers, key: 'signcolumn', defaultVal: true },
+  { id: 'nvim-wrap', state: neovimAnswers, key: 'wrap', defaultVal: false },
+  { id: 'nvim-termguicolors', state: neovimAnswers, key: 'termguicolors', defaultVal: true },
+  { id: 'nvim-expandtab', state: neovimAnswers, key: 'expandtab', defaultVal: true },
+  { id: 'nvim-smartindent', state: neovimAnswers, key: 'smartindent', defaultVal: true },
+  { id: 'nvim-ignorecase', state: neovimAnswers, key: 'ignorecase', defaultVal: true },
+  { id: 'nvim-smartcase', state: neovimAnswers, key: 'smartcase', defaultVal: true },
+  { id: 'nvim-hlsearch', state: neovimAnswers, key: 'hlsearch', defaultVal: true },
+  { id: 'nvim-clipboard', state: neovimAnswers, key: 'clipboard', defaultVal: true },
+  { id: 'nvim-mouse', state: neovimAnswers, key: 'mouse', defaultVal: true },
+  { id: 'nvim-swapfile', state: neovimAnswers, key: 'swapfile', defaultVal: true },
+  { id: 'nvim-undofile', state: neovimAnswers, key: 'undofile', defaultVal: true },
+  { id: 'nvim-splitright', state: neovimAnswers, key: 'splitright', defaultVal: true },
+  { id: 'nvim-splitbelow', state: neovimAnswers, key: 'splitbelow', defaultVal: true },
+];
 
-  const tmuxBaseIndex = document.getElementById('tmux-base-index');
-  if (tmuxBaseIndex) {
-    tmuxBaseIndex.addEventListener('change', () => {
-      tmuxAnswers.baseIndex = tmuxBaseIndex.checked;
-    });
-  }
+const RANGE_BINDINGS = [
+  // tmux ranges
+  { id: 'tmux-history-limit', state: tmuxAnswers, key: 'historyLimit', displayId: 'tmux-history-limit-val', suffix: '', defaultVal: 10000 },
+  { id: 'tmux-status-interval', state: tmuxAnswers, key: 'statusInterval', displayId: 'tmux-status-interval-val', suffix: '秒', defaultVal: 5 },
+  { id: 'tmux-status-left-length', state: tmuxAnswers, key: 'statusLeftLength', displayId: 'tmux-status-left-length-val', suffix: '', defaultVal: 40 },
+  { id: 'tmux-status-right-length', state: tmuxAnswers, key: 'statusRightLength', displayId: 'tmux-status-right-length-val', suffix: '', defaultVal: 50 },
+  { id: 'tmux-display-panes-time', state: tmuxAnswers, key: 'displayPanesTime', displayId: 'tmux-display-panes-time-val', suffix: 'ms', defaultVal: 2000 },
+  { id: 'tmux-repeat-time', state: tmuxAnswers, key: 'repeatTime', displayId: 'tmux-repeat-time-val', suffix: 'ms', defaultVal: 500 },
+  // zsh ranges
+  { id: 'zsh-history-size', state: zshAnswers, key: 'historySize', displayId: 'zsh-history-size-val', suffix: '', defaultVal: 10000 },
+  { id: 'zsh-save-history', state: zshAnswers, key: 'saveHistory', displayId: 'zsh-save-history-val', suffix: '', defaultVal: 10000 },
+  // neovim ranges
+  { id: 'nvim-scrolloff', state: neovimAnswers, key: 'scrolloff', displayId: 'nvim-scrolloff-val', suffix: '', defaultVal: 8 },
+  { id: 'nvim-tabwidth', state: neovimAnswers, key: 'tabWidth', displayId: 'nvim-tabwidth-val', suffix: '', defaultVal: 2 },
+];
 
-  const tmuxRenumber = document.getElementById('tmux-renumber');
-  if (tmuxRenumber) {
-    tmuxRenumber.addEventListener('change', () => {
-      tmuxAnswers.renumber = tmuxRenumber.checked;
-    });
-  }
+const SELECT_BINDINGS = [
+  { id: 'tmux-status-justify', state: tmuxAnswers, key: 'statusJustify' },
+  { id: 'tmux-terminal-type', state: tmuxAnswers, key: 'terminalType' },
+];
 
-  const tmuxPaneBorder = document.getElementById('tmux-pane-border');
-  if (tmuxPaneBorder) {
-    tmuxPaneBorder.addEventListener('change', () => {
-      tmuxAnswers.paneBorder = tmuxPaneBorder.checked;
-    });
-  }
+function setupToggleAndRangeListeners() {
+  TOGGLE_BINDINGS.forEach(({ id, state, key }) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', () => { state[key] = el.checked; });
+  });
 
-  const tmuxActiveBorder = document.getElementById('tmux-active-border');
-  if (tmuxActiveBorder) {
-    tmuxActiveBorder.addEventListener('change', () => {
-      tmuxAnswers.activeBorder = tmuxActiveBorder.checked;
-    });
-  }
+  RANGE_BINDINGS.forEach(({ id, state, key, displayId, suffix }) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('input', () => {
+        state[key] = parseInt(el.value, 10);
+        document.getElementById(displayId).textContent = el.value + suffix;
+      });
+    }
+  });
 
-  const tmuxStatusInterval = document.getElementById('tmux-status-interval');
-  if (tmuxStatusInterval) {
-    tmuxStatusInterval.addEventListener('input', () => {
-      tmuxAnswers.statusInterval = parseInt(tmuxStatusInterval.value, 10);
-      document.getElementById('tmux-status-interval-val').textContent = tmuxStatusInterval.value + '秒';
-    });
-  }
-
-  const tmuxAutoRename = document.getElementById('tmux-auto-rename');
-  if (tmuxAutoRename) {
-    tmuxAutoRename.addEventListener('change', () => {
-      tmuxAnswers.autoRename = tmuxAutoRename.checked;
-    });
-  }
-
-  const tmuxVisualBell = document.getElementById('tmux-visual-bell');
-  if (tmuxVisualBell) {
-    tmuxVisualBell.addEventListener('change', () => {
-      tmuxAnswers.visualBell = tmuxVisualBell.checked;
-    });
-  }
-
-  const tmuxHistoryLimit = document.getElementById('tmux-history-limit');
-  if (tmuxHistoryLimit) {
-    tmuxHistoryLimit.addEventListener('input', () => {
-      tmuxAnswers.historyLimit = parseInt(tmuxHistoryLimit.value, 10);
-      document.getElementById('tmux-history-limit-val').textContent = tmuxHistoryLimit.value;
-    });
-  }
-
-  const tmuxStatusLeftLength = document.getElementById('tmux-status-left-length');
-  if (tmuxStatusLeftLength) {
-    tmuxStatusLeftLength.addEventListener('input', () => {
-      tmuxAnswers.statusLeftLength = parseInt(tmuxStatusLeftLength.value, 10);
-      document.getElementById('tmux-status-left-length-val').textContent = tmuxStatusLeftLength.value;
-    });
-  }
-
-  const tmuxStatusRightLength = document.getElementById('tmux-status-right-length');
-  if (tmuxStatusRightLength) {
-    tmuxStatusRightLength.addEventListener('input', () => {
-      tmuxAnswers.statusRightLength = parseInt(tmuxStatusRightLength.value, 10);
-      document.getElementById('tmux-status-right-length-val').textContent = tmuxStatusRightLength.value;
-    });
-  }
-
-  const tmuxStatusJustify = document.getElementById('tmux-status-justify');
-  if (tmuxStatusJustify) {
-    tmuxStatusJustify.addEventListener('change', () => {
-      tmuxAnswers.statusJustify = tmuxStatusJustify.value;
-    });
-  }
-
-  const tmuxTerminalType = document.getElementById('tmux-terminal-type');
-  if (tmuxTerminalType) {
-    tmuxTerminalType.addEventListener('change', () => {
-      tmuxAnswers.terminalType = tmuxTerminalType.value;
-    });
-  }
-
-  const tmuxFocusEvents = document.getElementById('tmux-focus-events');
-  if (tmuxFocusEvents) {
-    tmuxFocusEvents.addEventListener('change', () => {
-      tmuxAnswers.focusEvents = tmuxFocusEvents.checked;
-    });
-  }
-
-  const tmuxClipboard = document.getElementById('tmux-clipboard');
-  if (tmuxClipboard) {
-    tmuxClipboard.addEventListener('change', () => {
-      tmuxAnswers.clipboard = tmuxClipboard.checked;
-    });
-  }
-
-  const tmuxAggressiveResize = document.getElementById('tmux-aggressive-resize');
-  if (tmuxAggressiveResize) {
-    tmuxAggressiveResize.addEventListener('change', () => {
-      tmuxAnswers.aggressiveResize = tmuxAggressiveResize.checked;
-    });
-  }
-
-  const tmuxDisplayPanesTime = document.getElementById('tmux-display-panes-time');
-  if (tmuxDisplayPanesTime) {
-    tmuxDisplayPanesTime.addEventListener('input', () => {
-      tmuxAnswers.displayPanesTime = parseInt(tmuxDisplayPanesTime.value, 10);
-      document.getElementById('tmux-display-panes-time-val').textContent = tmuxDisplayPanesTime.value + 'ms';
-    });
-  }
-
-  const tmuxRepeatTime = document.getElementById('tmux-repeat-time');
-  if (tmuxRepeatTime) {
-    tmuxRepeatTime.addEventListener('input', () => {
-      tmuxAnswers.repeatTime = parseInt(tmuxRepeatTime.value, 10);
-      document.getElementById('tmux-repeat-time-val').textContent = tmuxRepeatTime.value + 'ms';
-    });
-  }
-}
-
-// ── zsh option listeners ──────────────────────────────
-function setupZshListeners() {
-  const zshHistorySize = document.getElementById('zsh-history-size');
-  if (zshHistorySize) {
-    zshHistorySize.addEventListener('input', () => {
-      zshAnswers.historySize = parseInt(zshHistorySize.value, 10);
-      document.getElementById('zsh-history-size-val').textContent = zshHistorySize.value;
-    });
-  }
-
-  const zshSaveHistory = document.getElementById('zsh-save-history');
-  if (zshSaveHistory) {
-    zshSaveHistory.addEventListener('input', () => {
-      zshAnswers.saveHistory = parseInt(zshSaveHistory.value, 10);
-      document.getElementById('zsh-save-history-val').textContent = zshSaveHistory.value;
-    });
-  }
-
-  const zshShareHistory = document.getElementById('zsh-share-history');
-  if (zshShareHistory) {
-    zshShareHistory.addEventListener('change', () => {
-      zshAnswers.shareHistory = zshShareHistory.checked;
-    });
-  }
-
-  const zshHistIgnoreDups = document.getElementById('zsh-hist-ignore-dups');
-  if (zshHistIgnoreDups) {
-    zshHistIgnoreDups.addEventListener('change', () => {
-      zshAnswers.histIgnoreDups = zshHistIgnoreDups.checked;
-    });
-  }
-
-  const zshAutoMenu = document.getElementById('zsh-auto-menu');
-  if (zshAutoMenu) {
-    zshAutoMenu.addEventListener('change', () => {
-      zshAnswers.autoMenu = zshAutoMenu.checked;
-    });
-  }
-
-  const zshCaseSensitive = document.getElementById('zsh-case-sensitive');
-  if (zshCaseSensitive) {
-    zshCaseSensitive.addEventListener('change', () => {
-      zshAnswers.caseSensitive = zshCaseSensitive.checked;
-    });
-  }
-}
-
-function updateTmuxNextButton(stepIndex) {
-  const btn = document.getElementById(`btn-tmux-next-${stepIndex}`);
-  if (!btn) return;
-
-  if (stepIndex === 0) {
-    btn.disabled = tmuxAnswers.prefix === null;
-  } else if (stepIndex === 1) {
-    btn.disabled = tmuxAnswers.theme === null;
-  } else if (stepIndex === 2) {
-    btn.disabled = tmuxAnswers.statusPosition === null;
-  }
-}
-
-function updateZshNextButton(stepIndex) {
-  const btn = document.getElementById(`btn-zsh-next-${stepIndex}`);
-  if (!btn) return;
-
-  if (stepIndex === 0) {
-    btn.disabled = zshAnswers.pluginManager === null;
-  } else if (stepIndex === 1) {
-    btn.disabled = zshAnswers.keymap === null;
-  }
+  SELECT_BINDINGS.forEach(({ id, state, key }) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', () => { state[key] = el.value; });
+  });
 }
 
 // ── Bulk select / deselect ────────────────────────────
@@ -854,25 +467,14 @@ function bulkSelect(dataKey, selectAll) {
   container.querySelectorAll('.option').forEach(option => {
     if (selectAll) {
       option.classList.add('selected');
+      values.push(option.dataset.value);
     } else {
       option.classList.remove('selected');
     }
-    if (selectAll) values.push(option.dataset.value);
   });
 
-  // Update the appropriate state
-  if (dataKey === 'modules') {
-    answers.modules = values;
-  } else if (dataKey.startsWith('tmux-')) {
-    const tmuxKey = dataKey.replace('tmux-', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-    tmuxAnswers[tmuxKey] = values;
-  } else if (dataKey.startsWith('zsh-')) {
-    const zshKey = dataKey.replace('zsh-', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-    zshAnswers[zshKey] = values;
-  } else if (dataKey.startsWith('neovim-')) {
-    const nvimKey = dataKey.replace('neovim-', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-    neovimAnswers[nvimKey] = values;
-  }
+  const { state, key } = getToolState(dataKey);
+  state[key] = values;
 }
 
 // ── Starship preset templates ─────────────────────────
@@ -1382,44 +984,14 @@ function escapeHtml(str) {
 // ── Dynamic option setup (avoids duplicate listeners) ─
 function setupDynamicOptions(root) {
   root.querySelectorAll('.options[data-type="radio"]').forEach(container => {
-    const key = container.dataset.key;
     container.querySelectorAll('.option').forEach(option => {
-      option.addEventListener('click', () => {
-        container.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
-        option.classList.add('selected');
-        if (key.startsWith('zsh-')) {
-          const zshKey = key.replace('zsh-', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-          zshAnswers[zshKey] = option.dataset.value;
-        } else if (key.startsWith('neovim-')) {
-          const nvimKey = key.replace('neovim-', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-          neovimAnswers[nvimKey] = option.dataset.value;
-        }
-      });
+      option.addEventListener('click', () => handleRadioClick(container, option));
     });
   });
 
   root.querySelectorAll('.options[data-type="checkbox"]').forEach(container => {
-    const key = container.dataset.key;
     container.querySelectorAll('.option').forEach(option => {
-      option.addEventListener('click', () => {
-        option.classList.toggle('selected');
-        const val = option.dataset.value;
-        if (key.startsWith('zsh-')) {
-          const zshKey = key.replace('zsh-', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-          if (option.classList.contains('selected')) {
-            if (!zshAnswers[zshKey].includes(val)) zshAnswers[zshKey].push(val);
-          } else {
-            zshAnswers[zshKey] = zshAnswers[zshKey].filter(v => v !== val);
-          }
-        } else if (key.startsWith('neovim-')) {
-          const nvimKey = key.replace('neovim-', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-          if (option.classList.contains('selected')) {
-            if (!neovimAnswers[nvimKey].includes(val)) neovimAnswers[nvimKey].push(val);
-          } else {
-            neovimAnswers[nvimKey] = neovimAnswers[nvimKey].filter(v => v !== val);
-          }
-        }
-      });
+      option.addEventListener('click', () => handleCheckboxClick(container, option));
     });
   });
 }
@@ -1945,8 +1517,8 @@ function showToast(message) {
   setTimeout(() => toast.classList.remove('show'), 2000);
 }
 
-function copyConfig() {
-  const text = document.getElementById('config-output').innerText;
+function copyFromElement(elementId) {
+  const text = document.getElementById(elementId).innerText;
   navigator.clipboard.writeText(text).then(() => {
     showToast('コピーしました');
   }).catch(() => {
@@ -1954,18 +1526,21 @@ function copyConfig() {
   });
 }
 
-function downloadConfig() {
-  const text = document.getElementById('config-output').innerText;
+function downloadFromElement(elementId, filename) {
+  const text = document.getElementById(elementId).innerText;
   const blob = new Blob([text], { type: 'text/plain' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'starship.toml';
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+function copyConfig() { copyFromElement('config-output'); }
+function downloadConfig() { downloadFromElement('config-output', 'starship.toml'); }
 
 // ── tmux config generation ───────────────────────────
 function generateTmuxConfig() {
@@ -2335,27 +1910,8 @@ function renderTmuxResult() {
   buildTmuxStatusPreview();
 }
 
-function copyTmuxConfig() {
-  const text = document.getElementById('tmux-config-output').innerText;
-  navigator.clipboard.writeText(text).then(() => {
-    showToast('コピーしました');
-  }).catch(() => {
-    showToast('コピーに失敗しました');
-  });
-}
-
-function downloadTmuxConfig() {
-  const text = document.getElementById('tmux-config-output').innerText;
-  const blob = new Blob([text], { type: 'text/plain' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = '.tmux.conf';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
+function copyTmuxConfig() { copyFromElement('tmux-config-output'); }
+function downloadTmuxConfig() { downloadFromElement('tmux-config-output', '.tmux.conf'); }
 
 // ── zsh config generation ─────────────────────────────
 function generateZshConfig() {
@@ -2542,86 +2098,11 @@ function renderZshResult() {
   document.getElementById('zsh-config-output').innerHTML = highlightZsh(config);
 }
 
-function copyZshConfig() {
-  const text = document.getElementById('zsh-config-output').innerText;
-  navigator.clipboard.writeText(text).then(() => {
-    showToast('コピーしました');
-  }).catch(() => {
-    showToast('コピーに失敗しました');
-  });
-}
+function copyZshConfig() { copyFromElement('zsh-config-output'); }
+function downloadZshConfig() { downloadFromElement('zsh-config-output', '.zshrc'); }
 
-function downloadZshConfig() {
-  const text = document.getElementById('zsh-config-output').innerText;
-  const blob = new Blob([text], { type: 'text/plain' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = '.zshrc';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-// ── Neovim option listeners ───────────────────────────
-function setupNeovimListeners() {
-  const nvimToggles = {
-    'nvim-number': 'number',
-    'nvim-relativenumber': 'relativenumber',
-    'nvim-cursorline': 'cursorline',
-    'nvim-signcolumn': 'signcolumn',
-    'nvim-wrap': 'wrap',
-    'nvim-termguicolors': 'termguicolors',
-    'nvim-expandtab': 'expandtab',
-    'nvim-smartindent': 'smartindent',
-    'nvim-ignorecase': 'ignorecase',
-    'nvim-smartcase': 'smartcase',
-    'nvim-hlsearch': 'hlsearch',
-    'nvim-clipboard': 'clipboard',
-    'nvim-mouse': 'mouse',
-    'nvim-swapfile': 'swapfile',
-    'nvim-undofile': 'undofile',
-    'nvim-splitright': 'splitright',
-    'nvim-splitbelow': 'splitbelow',
-  };
-
-  for (const [id, key] of Object.entries(nvimToggles)) {
-    const el = document.getElementById(id);
-    if (el) {
-      el.addEventListener('change', () => {
-        neovimAnswers[key] = el.checked;
-      });
-    }
-  }
-
-  const nvimScrolloff = document.getElementById('nvim-scrolloff');
-  if (nvimScrolloff) {
-    nvimScrolloff.addEventListener('input', () => {
-      neovimAnswers.scrolloff = parseInt(nvimScrolloff.value, 10);
-      document.getElementById('nvim-scrolloff-val').textContent = nvimScrolloff.value;
-    });
-  }
-
-  const nvimTabwidth = document.getElementById('nvim-tabwidth');
-  if (nvimTabwidth) {
-    nvimTabwidth.addEventListener('input', () => {
-      neovimAnswers.tabWidth = parseInt(nvimTabwidth.value, 10);
-      document.getElementById('nvim-tabwidth-val').textContent = nvimTabwidth.value;
-    });
-  }
-}
-
-function updateNeovimNextButton(stepIndex) {
-  const btn = document.getElementById(`btn-neovim-next-${stepIndex}`);
-  if (!btn) return;
-
-  if (stepIndex === 0) {
-    btn.disabled = neovimAnswers.pluginManager === null;
-  } else if (stepIndex === 2) {
-    btn.disabled = neovimAnswers.colorscheme === null;
-  }
-}
+// Neovim toggle/range listeners are now handled by the data-driven
+// TOGGLE_BINDINGS, RANGE_BINDINGS, and setupToggleAndRangeListeners().
 
 // ── Neovim plugins section (Step 2) ───────────────────
 function buildNeovimPluginsSection() {
@@ -3321,27 +2802,8 @@ function renderNeovimResult() {
   buildNeovimPreview();
 }
 
-function copyNeovimConfig() {
-  const text = document.getElementById('neovim-config-output').innerText;
-  navigator.clipboard.writeText(text).then(() => {
-    showToast('コピーしました');
-  }).catch(() => {
-    showToast('コピーに失敗しました');
-  });
-}
-
-function downloadNeovimConfig() {
-  const text = document.getElementById('neovim-config-output').innerText;
-  const blob = new Blob([text], { type: 'text/plain' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'init.lua';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
+function copyNeovimConfig() { copyFromElement('neovim-config-output'); }
+function downloadNeovimConfig() { downloadFromElement('neovim-config-output', 'init.lua'); }
 
 // ── Keyboard navigation ───────────────────────────────
 document.addEventListener('keydown', (e) => {
@@ -3375,5 +2837,4 @@ document.querySelectorAll('.starship-step, .tmux-step, .zsh-step, .neovim-step')
   s.style.display = 'none';
 });
 
-renderProgress();
 setupOptions();
