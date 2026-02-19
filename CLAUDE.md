@@ -15,19 +15,27 @@ dotfiles-creator/
 ├── CLAUDE.md           # このファイル — AIアシスタント向けガイド
 ├── README.md           # プロジェクト紹介・使い方ガイド
 ├── .gitignore          # OS/エディタの一時ファイルを除外 (.DS_Store, Thumbs.db, *.swp)
+├── run_tests.sh        # テスト実行スクリプト — node --test tests/*.test.mjs
 ├── index.html          # HTML のみ — Starship、tmux、zsh、Neovim のウィザードUI構造
 ├── css/
 │   └── style.css       # 全スタイル — CSS変数、レイアウト、コンポーネント、シンタックスハイライト
-└── js/
-    ├── state.js        # グローバル状態変数と定数（最初にロード）
-    ├── utils.js        # 共有ユーティリティ — シンタックスハイライト、showToast、setupDynamicOptions
-    ├── navigation.js   # ウィザードナビゲーション — showStep 系、nextStep、prevStep、goToStart、updateNextButton 系、bulkSelect
-    ├── starship.js     # Starship 設定生成・プレビュー・結果表示
-    ├── tmux.js         # tmux 設定生成・ステータスバープレビュー・結果表示
-    ├── zsh.js          # zsh プラグインUI生成・設定生成・結果表示
-    ├── neovim.js       # Neovim プラグインUI生成・設定生成・エディタプレビュー・結果表示
-    ├── handlers.js     # イベントハンドラ — setupOptions、setupTmuxListeners、setupZshListeners、setupNeovimListeners
-    └── init.js         # キーボードナビゲーションと初期化（最後にロード）
+├── js/
+│   ├── state.js        # グローバル状態変数と定数（最初にロード）
+│   ├── utils.js        # 共有ユーティリティ — シンタックスハイライト、showToast、setupDynamicOptions
+│   ├── navigation.js   # ウィザードナビゲーション — showStep 系、nextStep、prevStep、goToStart、updateNextButton 系、bulkSelect
+│   ├── starship.js     # Starship 設定生成・プレビュー・結果表示
+│   ├── tmux.js         # tmux 設定生成・ステータスバープレビュー・結果表示
+│   ├── zsh.js          # zsh プラグインUI生成・設定生成・結果表示
+│   ├── neovim.js       # Neovim プラグインUI生成・設定生成・エディタプレビュー・結果表示
+│   ├── handlers.js     # イベントハンドラ — setupOptions、setupTmuxListeners、setupZshListeners、setupNeovimListeners
+│   └── init.js         # キーボードナビゲーションと初期化（最後にロード）
+└── tests/
+    ├── helpers.mjs     # テストヘルパー — Function コンストラクタでソースを独立スコープにロード
+    ├── utils.test.mjs  # escapeHtml、highlightToml/Conf/Zsh/Lua、highlightValue のテスト
+    ├── starship.test.mjs # generateConfig、buildFormatParts、getCharacter/Color のテスト
+    ├── tmux.test.mjs   # generateTmuxConfig、getThemeColors のテスト
+    ├── zsh.test.mjs    # generateZshConfig のテスト
+    └── neovim.test.mjs # generateNeovimConfig、getNeovimThemeColors のテスト
 ```
 
 **依存関係、ビルドツール、パッケージマネージャー、フレームワークは一切なし**。静的ファイルとしてそのまま配信されます。
@@ -39,7 +47,7 @@ dotfiles-creator/
 - **言語:** Vanilla JavaScript (ES6+)、HTML5、CSS3
 - **フレームワーク/ライブラリ:** なし
 - **ビルドシステム:** なし — ブラウザで `index.html` を直接開く
-- **テスト:** 未設定
+- **テスト:** Node.js 組み込みテストランナー (`node:test`) — `./run_tests.sh` で実行、npm 不要
 - **リンター:** 未設定
 
 ## 開発環境セットアップ
@@ -47,6 +55,14 @@ dotfiles-creator/
 インストール不要。ローカルで実行するには：
 
 1. `index.html` をブラウザで開く
+
+テストを実行するには（Node.js 18+ が必要）：
+
+```bash
+./run_tests.sh
+# または
+node --test tests/*.test.mjs
+```
 
 依存関係のインストール、環境変数、ビルドステップは不要です。
 
