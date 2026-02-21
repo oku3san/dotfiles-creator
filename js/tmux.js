@@ -316,22 +316,66 @@ function getThemeColors(theme) {
   return themes[theme] || themes.github;
 }
 
-// ── tmux full session preview ──────────────────────────
-function buildTmuxPreview() {
-  const preview = document.getElementById('tmux-preview');
-  if (!preview) return;
+// ── tmux interactive preview ──────────────────────────
+let tmuxPreviewState = null;
 
+const PREVIEW_CONTENT_TYPES = ['shell', 'editor', 'htop', 'git', 'blank'];
+
+function getPaneContentHtml(contentType) {
+  const prefix = tmuxAnswers.prefix || 'C-b';
+  const mouseVal = tmuxAnswers.mouse ? 'on' : 'off';
+  switch (contentType) {
+    case 'shell':
+      return `<span style="color:#3fb950">user@myhost</span>:<span style="color:#58a6ff">~/projects</span>$ ls<br><span style="color:#8b949e">README.md  src/  tests/</span><br><span style="color:#3fb950">user@myhost</span>:<span style="color:#58a6ff">~/projects</span>$ <span class="tmux-cursor">▌</span>`;
+    case 'editor':
+      return `<span style="color:#8b949e"># ~/.tmux.conf</span><br><span style="color:#58a6ff">set</span> -g prefix ${prefix}<br><span style="color:#58a6ff">set</span> -g mouse ${mouseVal}<br><span style="color:#8b949e">~</span>`;
+    case 'htop':
+      return `<span style="color:#8b949e">Tasks: 52</span><br><span style="color:#3fb950">Mem</span>[<span style="color:#58a6ff">▓▓▓▓░░░</span> 1.2G/8G]<br><span style="color:#3fb950">CPU</span>[<span style="color:#3fb950">▓▓░░░</span> 3.2%]<br><span style="color:#d2a679">1</span> bash <span style="color:#8b949e">0.1%</span>`;
+    case 'git':
+      return `<span style="color:#3fb950">*</span> <span style="color:#58a6ff">main</span> 3a4b5c Add dotfiles<br><span style="color:#3fb950">*</span> <span style="color:#8b949e">prev</span> 1d2e3f Update zsh<br><span style="color:#8b949e">~</span>`;
+    default: // blank
+      return `<span style="color:#3fb950">user@myhost</span>:<span style="color:#58a6ff">~</span>$ <span class="tmux-cursor">▌</span>`;
+  }
+}
+
+function initTmuxPreviewState() {
+  return {
+    windows: [
+      { id: 0, name: '1:zsh', active: false },
+      { id: 1, name: '2:vim', active: true },
+      { id: 2, name: '3:htop', active: false },
+    ],
+    nextWindowNum: 4,
+    // rows: array of arrays — each inner array is a row of panes
+    rows: [
+      [
+        { id: 0, contentType: 'shell' },
+        { id: 1, contentType: 'editor' },
+      ],
+    ],
+    activePaneId: 0,
+    nextPaneId: 2,
+  };
+}
+
+function renderTmuxPreviewFromState() {
+  const preview = document.getElementById('tmux-preview');
+  if (!preview || !tmuxPreviewState) return;
+
+  const s = tmuxPreviewState;
   const theme = tmuxAnswers.theme;
   const themeColors = (theme && theme !== 'default') ? getThemeColors(theme) : {
     statusBg: '#333333', statusFg: '#d0d0d0', activeBg: '#005f00', activeFg: '#ffffff',
     activeBorder: '#00d700', border: '#555555',
   };
 
+  const totalPanes = s.rows.reduce((sum, row) => sum + row.length, 0);
+
   // Status bar parts
   const leftParts = [];
   const rightParts = [];
   if (tmuxAnswers.statusModules.includes('session')) leftParts.push('[main]');
-  if (tmuxAnswers.statusModules.includes('pane-count')) leftParts.push('[2P]');
+  if (tmuxAnswers.statusModules.includes('pane-count')) leftParts.push(`[${totalPanes}P]`);
   if (tmuxAnswers.statusModules.includes('git')) rightParts.push('main');
   if (tmuxAnswers.statusModules.includes('hostname')) rightParts.push('myhost');
   if (tmuxAnswers.statusModules.includes('battery')) rightParts.push('85%');
@@ -339,45 +383,139 @@ function buildTmuxPreview() {
   if (tmuxAnswers.statusModules.includes('load')) rightParts.push('0.42');
   if (tmuxAnswers.statusModules.includes('uptime')) rightParts.push('up 3d 2h');
 
-  const windowHtml = `<span class="tmux-preview-window">1:zsh</span><span class="tmux-preview-window active" style="background:${themeColors.activeBg};color:${themeColors.activeFg};border-radius:2px">2:vim*</span><span class="tmux-preview-window">3:htop</span>`;
+  // Window tabs (clickable)
+  const windowTabsHtml = s.windows.map(w => {
+    const isActive = w.active;
+    const activeStyle = isActive
+      ? `background:${themeColors.activeBg};color:${themeColors.activeFg};border-radius:2px;padding:0 0.5rem;`
+      : '';
+    const activeCls = isActive ? ' active' : '';
+    return `<span class="tmux-preview-window${activeCls}" style="${activeStyle}" onclick="tmuxPreviewClickWindow(${w.id})" title="クリックで切り替え">${w.name}</span>`;
+  }).join('');
+  const addWindowBtn = s.windows.length < 5
+    ? `<span class="tmux-preview-window-add" onclick="tmuxPreviewAddWindow()" title="新規ウィンドウを追加">+</span>`
+    : '';
 
   const statusBarHtml = `<div class="tmux-preview-status" style="background:${themeColors.statusBg};color:${themeColors.statusFg}">
     <span class="tmux-preview-status-left">${leftParts.join(' ')}</span>
-    <span class="tmux-preview-status-center">${windowHtml}</span>
+    <span class="tmux-preview-status-center">${windowTabsHtml}${addWindowBtn}</span>
     <span class="tmux-preview-status-right">${rightParts.join(' | ')}</span>
   </div>`;
 
-  // Pane borders
+  // Pane colors
   const activeBorderColor = tmuxAnswers.activeBorder ? themeColors.activeBorder : '#00d700';
   const borderColor = themeColors.border || '#555555';
-  const fgColor = themeColors.statusFg || '#d0d0d0';
 
-  const prefix = tmuxAnswers.prefix || 'C-b';
+  // Determine split constraints
+  const activeRowIdx = s.rows.findIndex(row => row.some(p => p.id === s.activePaneId));
+  const activeRowLen = activeRowIdx >= 0 ? s.rows[activeRowIdx].length : 0;
+  const canSplitH = totalPanes < 6 && activeRowLen < 3;
+  const canSplitV = totalPanes < 6 && s.rows.length < 3;
+  const canClose = totalPanes > 1;
 
-  const panesHtml = `<div class="tmux-pane-area">
-    <div class="tmux-pane tmux-pane-active" style="border-color:${activeBorderColor}">
-      <span class="tmux-pane-label" style="color:${activeBorderColor}">ペイン1 (アクティブ)</span>
-      <div class="tmux-pane-content" style="color:${fgColor}">
-        <span style="color:#3fb950">user@myhost</span>:<span style="color:#58a6ff">~/projects</span>$ ls<br>
-        <span style="color:#8b949e">README.md  src/  tests/</span><br>
-        <span style="color:#3fb950">user@myhost</span>:<span style="color:#58a6ff">~/projects</span>$ <span class="tmux-cursor">▌</span>
-      </div>
-    </div>
-    <div class="tmux-pane" style="border-color:${borderColor}">
-      <span class="tmux-pane-label" style="color:${borderColor}">ペイン2</span>
-      <div class="tmux-pane-content" style="color:${fgColor}">
-        <span style="color:#8b949e"># ~/.tmux.conf</span><br>
-        <span style="color:#58a6ff">set</span> -g prefix ${prefix}<br>
-        <span style="color:#58a6ff">set</span> -g mouse ${tmuxAnswers.mouse ? 'on' : 'off'}<br>
-        <span style="color:#8b949e">~</span>
-      </div>
-    </div>
+  // Toolbar
+  const toolbarHtml = `<div class="tmux-toolbar">
+    <span class="tmux-toolbar-label">プレビュー操作:</span>
+    <button class="tmux-toolbar-btn" onclick="tmuxPreviewSplitH()" ${canSplitH ? '' : 'disabled'} title="横分割 (アクティブペインを左右に分割)">| 横分割</button>
+    <button class="tmux-toolbar-btn" onclick="tmuxPreviewSplitV()" ${canSplitV ? '' : 'disabled'} title="縦分割 (アクティブペインを上下に分割)">─ 縦分割</button>
+    <button class="tmux-toolbar-btn" onclick="tmuxPreviewClosePane()" ${canClose ? '' : 'disabled'} title="アクティブペインを閉じる">✕ 閉じる</button>
   </div>`;
+
+  // Pane rows (clickable panes)
+  let paneDisplayNum = 0;
+  const paneRowsHtml = s.rows.map((row, rowIdx) => {
+    const panesHtml = row.map((pane) => {
+      paneDisplayNum++;
+      const isActive = pane.id === s.activePaneId;
+      const borderC = isActive ? activeBorderColor : borderColor;
+      const activeCls = isActive ? ' tmux-pane-active' : '';
+      const label = isActive ? `ペイン${paneDisplayNum} (アクティブ)` : `ペイン${paneDisplayNum}`;
+      const contentHtml = getPaneContentHtml(pane.contentType);
+      return `<div class="tmux-pane${activeCls}" data-pane-id="${pane.id}" onclick="tmuxPreviewClickPane(${pane.id})" style="border-color:${borderC}" title="クリックでアクティブ化">
+        <span class="tmux-pane-label" style="color:${borderC}">${label}</span>
+        <div class="tmux-pane-content">${contentHtml}</div>
+      </div>`;
+    }).join('');
+    const noTopBorder = rowIdx > 0 ? ' tmux-pane-row-no-top' : '';
+    return `<div class="tmux-pane-row${noTopBorder}">${panesHtml}</div>`;
+  }).join('');
+
+  const panesHtml = `<div class="tmux-pane-rows">${paneRowsHtml}</div>`;
 
   const position = tmuxAnswers.statusPosition || 'bottom';
   preview.innerHTML = position === 'top'
-    ? statusBarHtml + panesHtml
-    : panesHtml + statusBarHtml;
+    ? statusBarHtml + toolbarHtml + panesHtml
+    : toolbarHtml + panesHtml + statusBarHtml;
+}
+
+function tmuxPreviewClickPane(paneId) {
+  if (!tmuxPreviewState) return;
+  tmuxPreviewState.activePaneId = paneId;
+  renderTmuxPreviewFromState();
+}
+
+function tmuxPreviewClickWindow(winId) {
+  if (!tmuxPreviewState) return;
+  tmuxPreviewState.windows.forEach(w => { w.active = w.id === winId; });
+  renderTmuxPreviewFromState();
+}
+
+function tmuxPreviewSplitH() {
+  if (!tmuxPreviewState) return;
+  const s = tmuxPreviewState;
+  const rowIdx = s.rows.findIndex(row => row.some(p => p.id === s.activePaneId));
+  if (rowIdx < 0) return;
+  const contentType = PREVIEW_CONTENT_TYPES[s.nextPaneId % PREVIEW_CONTENT_TYPES.length];
+  const newPane = { id: s.nextPaneId++, contentType };
+  s.rows[rowIdx].push(newPane);
+  s.activePaneId = newPane.id;
+  renderTmuxPreviewFromState();
+}
+
+function tmuxPreviewSplitV() {
+  if (!tmuxPreviewState) return;
+  const s = tmuxPreviewState;
+  const rowIdx = s.rows.findIndex(row => row.some(p => p.id === s.activePaneId));
+  if (rowIdx < 0) return;
+  const contentType = PREVIEW_CONTENT_TYPES[s.nextPaneId % PREVIEW_CONTENT_TYPES.length];
+  const newPane = { id: s.nextPaneId++, contentType };
+  s.rows.splice(rowIdx + 1, 0, [newPane]);
+  s.activePaneId = newPane.id;
+  renderTmuxPreviewFromState();
+}
+
+function tmuxPreviewClosePane() {
+  if (!tmuxPreviewState) return;
+  const s = tmuxPreviewState;
+  const totalPanes = s.rows.reduce((sum, row) => sum + row.length, 0);
+  if (totalPanes <= 1) return;
+  const rowIdx = s.rows.findIndex(row => row.some(p => p.id === s.activePaneId));
+  if (rowIdx < 0) return;
+  const row = s.rows[rowIdx];
+  const colIdx = row.findIndex(p => p.id === s.activePaneId);
+  row.splice(colIdx, 1);
+  if (row.length === 0) s.rows.splice(rowIdx, 1);
+  // Activate first remaining pane
+  s.activePaneId = s.rows[0][0].id;
+  renderTmuxPreviewFromState();
+}
+
+function tmuxPreviewAddWindow() {
+  if (!tmuxPreviewState) return;
+  const s = tmuxPreviewState;
+  if (s.windows.length >= 5) return;
+  const num = s.nextWindowNum++;
+  const windowNames = ['bash', 'node', 'git', 'nvim', 'python'];
+  const name = `${num}:${windowNames[num % windowNames.length]}`;
+  const newWin = { id: num * 1000 + s.windows.length, name, active: false };
+  s.windows.push(newWin);
+  s.windows.forEach(w => { w.active = w.id === newWin.id; });
+  renderTmuxPreviewFromState();
+}
+
+function buildTmuxPreview() {
+  tmuxPreviewState = initTmuxPreviewState();
+  renderTmuxPreviewFromState();
 }
 
 // ── tmux result rendering ─────────────────────────────
