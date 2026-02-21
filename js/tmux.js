@@ -316,54 +316,75 @@ function getThemeColors(theme) {
   return themes[theme] || themes.github;
 }
 
-// ── tmux status bar preview ───────────────────────────
-function buildTmuxStatusPreview() {
+// ── tmux full session preview ──────────────────────────
+function buildTmuxPreview() {
+  const preview = document.getElementById('tmux-preview');
+  if (!preview) return;
+
   const theme = tmuxAnswers.theme;
   const themeColors = (theme && theme !== 'default') ? getThemeColors(theme) : {
-    statusBg: '#333333', statusFg: '#ffffff', activeBg: '#00ff00', activeFg: '#000000',
+    statusBg: '#333333', statusFg: '#d0d0d0', activeBg: '#005f00', activeFg: '#ffffff',
+    activeBorder: '#00d700', border: '#555555',
   };
 
+  // Status bar parts
   const leftParts = [];
   const rightParts = [];
-
   if (tmuxAnswers.statusModules.includes('session')) leftParts.push('[main]');
   if (tmuxAnswers.statusModules.includes('pane-count')) leftParts.push('[2P]');
-
   if (tmuxAnswers.statusModules.includes('git')) rightParts.push('main');
   if (tmuxAnswers.statusModules.includes('hostname')) rightParts.push('myhost');
   if (tmuxAnswers.statusModules.includes('battery')) rightParts.push('85%');
-  if (tmuxAnswers.statusModules.includes('datetime')) rightParts.push('2026-02-15 14:30');
-  if (tmuxAnswers.statusModules.includes('load')) rightParts.push('0.42 0.38 0.35');
+  if (tmuxAnswers.statusModules.includes('datetime')) rightParts.push('2026-02-21 14:30');
+  if (tmuxAnswers.statusModules.includes('load')) rightParts.push('0.42');
   if (tmuxAnswers.statusModules.includes('uptime')) rightParts.push('up 3d 2h');
 
   const windowHtml = `<span class="tmux-preview-window">1:zsh</span><span class="tmux-preview-window active" style="background:${themeColors.activeBg};color:${themeColors.activeFg};border-radius:2px">2:vim*</span><span class="tmux-preview-window">3:htop</span>`;
 
-  const position = tmuxAnswers.statusPosition || 'bottom';
-  const statusBar = `<div class="tmux-preview-status" style="background:${themeColors.statusBg};color:${themeColors.statusFg}">
+  const statusBarHtml = `<div class="tmux-preview-status" style="background:${themeColors.statusBg};color:${themeColors.statusFg}">
     <span class="tmux-preview-status-left">${leftParts.join(' ')}</span>
     <span class="tmux-preview-status-center">${windowHtml}</span>
     <span class="tmux-preview-status-right">${rightParts.join(' | ')}</span>
   </div>`;
 
-  const preview = document.getElementById('tmux-preview');
-  if (!preview) return;
+  // Pane borders
+  const activeBorderColor = tmuxAnswers.activeBorder ? themeColors.activeBorder : '#00d700';
+  const borderColor = themeColors.border || '#555555';
+  const fgColor = themeColors.statusFg || '#d0d0d0';
 
-  const content = preview.querySelector('.tmux-preview-content');
-  const existingStatus = preview.querySelector('.tmux-preview-status');
-  if (existingStatus) existingStatus.remove();
+  const prefix = tmuxAnswers.prefix || 'C-b';
 
-  if (position === 'top') {
-    content.insertAdjacentHTML('beforebegin', statusBar);
-  } else {
-    content.insertAdjacentHTML('afterend', statusBar);
-  }
+  const panesHtml = `<div class="tmux-pane-area">
+    <div class="tmux-pane tmux-pane-active" style="border-color:${activeBorderColor}">
+      <span class="tmux-pane-label" style="color:${activeBorderColor}">ペイン1 (アクティブ)</span>
+      <div class="tmux-pane-content" style="color:${fgColor}">
+        <span style="color:#3fb950">user@myhost</span>:<span style="color:#58a6ff">~/projects</span>$ ls<br>
+        <span style="color:#8b949e">README.md  src/  tests/</span><br>
+        <span style="color:#3fb950">user@myhost</span>:<span style="color:#58a6ff">~/projects</span>$ <span class="tmux-cursor">▌</span>
+      </div>
+    </div>
+    <div class="tmux-pane" style="border-color:${borderColor}">
+      <span class="tmux-pane-label" style="color:${borderColor}">ペイン2</span>
+      <div class="tmux-pane-content" style="color:${fgColor}">
+        <span style="color:#8b949e"># ~/.tmux.conf</span><br>
+        <span style="color:#58a6ff">set</span> -g prefix ${prefix}<br>
+        <span style="color:#58a6ff">set</span> -g mouse ${tmuxAnswers.mouse ? 'on' : 'off'}<br>
+        <span style="color:#8b949e">~</span>
+      </div>
+    </div>
+  </div>`;
+
+  const position = tmuxAnswers.statusPosition || 'bottom';
+  preview.innerHTML = position === 'top'
+    ? statusBarHtml + panesHtml
+    : panesHtml + statusBarHtml;
 }
 
 // ── tmux result rendering ─────────────────────────────
 function renderTmuxResult() {
   const config = generateTmuxConfig();
   document.getElementById('tmux-config-output').innerHTML = highlightConf(config);
-  buildTmuxStatusPreview();
+  buildTmuxPreview();
 }
 
 function copyTmuxConfig() {
