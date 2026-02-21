@@ -725,6 +725,34 @@ button:disabled {
   font-weight: bold;
 }
 
+.tmux-pane-area {
+  display: flex;
+  min-height: 130px;
+}
+
+.tmux-pane {
+  flex: 1;
+  border: 1px solid;
+  padding: 0.4rem 0.5rem;
+  overflow: hidden;
+  font-size: 0.8rem;
+}
+
+.tmux-pane + .tmux-pane {
+  border-left-width: 0;
+}
+
+.tmux-pane-label {
+  display: block;
+  font-size: 0.65rem;
+  margin-bottom: 0.3rem;
+  opacity: 0.8;
+}
+
+.tmux-cursor {
+  animation: blink 1s step-end infinite;
+}
+
 /* Keyboard shortcut hints */
 .keyboard-hint {
   color: var(--text-muted);
