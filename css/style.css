@@ -719,10 +719,87 @@ button:disabled {
 .tmux-preview-window {
   display: inline-block;
   padding: 0 0.5rem;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.tmux-preview-window:hover {
+  opacity: 0.75;
 }
 
 .tmux-preview-window.active {
   font-weight: bold;
+}
+
+.tmux-preview-window-add {
+  display: inline-block;
+  padding: 0 0.4rem;
+  cursor: pointer;
+  color: #666;
+  font-size: 1rem;
+  line-height: 1;
+  vertical-align: middle;
+  transition: color 0.15s;
+}
+
+.tmux-preview-window-add:hover {
+  color: #ccc;
+}
+
+/* Toolbar for split/close controls */
+.tmux-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.6rem;
+  background: #111;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.tmux-toolbar-label {
+  color: #555;
+  font-size: 0.7rem;
+  margin-right: 0.2rem;
+  white-space: nowrap;
+}
+
+.tmux-toolbar-btn {
+  background: #1a1a1a;
+  color: #888;
+  border: 1px solid #333;
+  border-radius: 3px;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.7rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.tmux-toolbar-btn:hover:not(:disabled) {
+  background: #2a2a2a;
+  color: #ddd;
+  border-color: #555;
+}
+
+.tmux-toolbar-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Pane rows layout */
+.tmux-pane-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.tmux-pane-row {
+  display: flex;
+  min-height: 120px;
+}
+
+.tmux-pane-row-no-top .tmux-pane {
+  border-top-width: 0;
 }
 
 .tmux-pane-area {
@@ -736,6 +813,12 @@ button:disabled {
   padding: 0.4rem 0.5rem;
   overflow: hidden;
   font-size: 0.8rem;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.tmux-pane:hover:not(.tmux-pane-active) {
+  opacity: 0.8;
 }
 
 .tmux-pane + .tmux-pane {
@@ -747,6 +830,11 @@ button:disabled {
   font-size: 0.65rem;
   margin-bottom: 0.3rem;
   opacity: 0.8;
+}
+
+.tmux-pane-content {
+  color: #c0c0c0;
+  line-height: 1.5;
 }
 
 .tmux-cursor {
