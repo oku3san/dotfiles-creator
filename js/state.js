@@ -1,9 +1,10 @@
 // ── State ──────────────────────────────────────────────
-let selectedTool = null; // 'starship', 'tmux', 'zsh', or 'neovim'
+let selectedTool = null; // 'starship', 'tmux', 'zsh', 'neovim', or 'claudemd'
 const TOTAL_STEPS = 6;
 const TMUX_TOTAL_STEPS = 5;
 const ZSH_TOTAL_STEPS = 5;
 const NEOVIM_TOTAL_STEPS = 5;
+const CLAUDE_MD_TOTAL_STEPS = 5;
 let currentStep = 0;
 
 // Starship answers
@@ -68,6 +69,20 @@ const zshAnswers = {
   theme: null,
   plugins: [],
   aliases: [],
+};
+
+// CLAUDE.md answers
+const claudeMdAnswers = {
+  projectName: '',
+  projectDescription: '',
+  language: null,       // 'javascript', 'python', 'go', 'rust', 'java', 'ruby', 'other'
+  framework: '',
+  buildCommand: '',
+  testCommand: '',
+  devCommand: '',
+  lintCommand: '',
+  conventions: [],      // coding convention checkboxes
+  aiGuidelines: [],     // AI assistant guideline checkboxes
 };
 
 // Neovim answers

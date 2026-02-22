@@ -50,6 +50,16 @@ function setupOptions() {
           return;
         }
 
+        // claudemd options
+        if (key.startsWith('claudemd-')) {
+          const cmdKey = key.replace('claudemd-', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+          claudeMdAnswers[cmdKey] = option.dataset.value;
+          const stepEl = option.closest('.step');
+          const stepId = stepEl?.id;
+          if (stepId === 'claudemd-step-0') updateClaudeMdNextButton(0);
+          return;
+        }
+
         // Starship options
         answers[key] = option.dataset.value;
         // Clear custom character if a preset is selected
@@ -102,6 +112,17 @@ function setupOptions() {
             if (!neovimAnswers[nvimKey].includes(val)) neovimAnswers[nvimKey].push(val);
           } else {
             neovimAnswers[nvimKey] = neovimAnswers[nvimKey].filter(v => v !== val);
+          }
+          return;
+        }
+
+        // claudemd checkboxes
+        if (key.startsWith('claudemd-')) {
+          const cmdKey = key.replace('claudemd-', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+          if (option.classList.contains('selected')) {
+            if (!claudeMdAnswers[cmdKey].includes(val)) claudeMdAnswers[cmdKey].push(val);
+          } else {
+            claudeMdAnswers[cmdKey] = claudeMdAnswers[cmdKey].filter(v => v !== val);
           }
           return;
         }
@@ -181,6 +202,9 @@ function setupOptions() {
 
   // neovim specific listeners
   setupNeovimListeners();
+
+  // claudemd specific listeners
+  setupClaudeMdListeners();
 }
 
 // ── tmux option listeners ─────────────────────────────
@@ -409,6 +433,59 @@ function setupNeovimListeners() {
     nvimTabwidth.addEventListener('input', () => {
       neovimAnswers.tabWidth = parseInt(nvimTabwidth.value, 10);
       document.getElementById('nvim-tabwidth-val').textContent = nvimTabwidth.value;
+    });
+  }
+}
+
+// ── CLAUDE.md option listeners ────────────────────────
+function setupClaudeMdListeners() {
+  const projectName = document.getElementById('claudemd-project-name');
+  if (projectName) {
+    projectName.addEventListener('input', () => {
+      claudeMdAnswers.projectName = projectName.value;
+      updateClaudeMdNextButton(0);
+    });
+  }
+
+  const projectDesc = document.getElementById('claudemd-project-desc');
+  if (projectDesc) {
+    projectDesc.addEventListener('input', () => {
+      claudeMdAnswers.projectDescription = projectDesc.value;
+    });
+  }
+
+  const framework = document.getElementById('claudemd-framework');
+  if (framework) {
+    framework.addEventListener('input', () => {
+      claudeMdAnswers.framework = framework.value;
+    });
+  }
+
+  const devCommand = document.getElementById('claudemd-dev-command');
+  if (devCommand) {
+    devCommand.addEventListener('input', () => {
+      claudeMdAnswers.devCommand = devCommand.value;
+    });
+  }
+
+  const buildCommand = document.getElementById('claudemd-build-command');
+  if (buildCommand) {
+    buildCommand.addEventListener('input', () => {
+      claudeMdAnswers.buildCommand = buildCommand.value;
+    });
+  }
+
+  const testCommand = document.getElementById('claudemd-test-command');
+  if (testCommand) {
+    testCommand.addEventListener('input', () => {
+      claudeMdAnswers.testCommand = testCommand.value;
+    });
+  }
+
+  const lintCommand = document.getElementById('claudemd-lint-command');
+  if (lintCommand) {
+    lintCommand.addEventListener('input', () => {
+      claudeMdAnswers.lintCommand = lintCommand.value;
     });
   }
 }

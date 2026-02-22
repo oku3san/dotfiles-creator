@@ -2,11 +2,11 @@
 
 ## プロジェクト概要
 
-**dotfiles-creator** は **Dotfiles Config Generator** です。[Starship](https://starship.rs) のシェルプロンプト設定、[tmux](https://github.com/tmux/tmux/wiki) のターミナルマルチプレクサ設定、[zsh](https://www.zsh.org/) のシェル設定、[Neovim](https://neovim.io/) のテキストエディタ設定を、対話形式のウィザードで生成するクライアントサイドのシングルページWebアプリケーションです。UIは日本語です。
+**dotfiles-creator** は **Dotfiles Config Generator** です。[Starship](https://starship.rs) のシェルプロンプト設定、[tmux](https://github.com/tmux/tmux/wiki) のターミナルマルチプレクサ設定、[zsh](https://www.zsh.org/) のシェル設定、[Neovim](https://neovim.io/) のテキストエディタ設定、[Claude Code](https://docs.anthropic.com/ja/docs/claude-code/overview) 向けの CLAUDE.md プロジェクト設定を、対話形式のウィザードで生成するクライアントサイドのシングルページWebアプリケーションです。UIは日本語です。
 
 - **オーナー:** oku3san
 - **リポジトリ:** [oku3san/dotfiles-creator](https://github.com/oku3san/dotfiles-creator)
-- **対応ツール:** Starship、tmux、zsh、Neovim
+- **対応ツール:** Starship、tmux、zsh、Neovim、CLAUDE.md
 
 ## リポジトリ構成
 
@@ -27,7 +27,8 @@ dotfiles-creator/
 │   ├── tmux.js         # tmux 設定生成・ステータスバープレビュー・結果表示
 │   ├── zsh.js          # zsh プラグインUI生成・設定生成・結果表示
 │   ├── neovim.js       # Neovim プラグインUI生成・設定生成・エディタプレビュー・結果表示
-│   ├── handlers.js     # イベントハンドラ — setupOptions、setupTmuxListeners、setupZshListeners、setupNeovimListeners
+│   ├── claudemd.js     # CLAUDE.md 設定生成・Markdown ハイライト・結果表示
+│   ├── handlers.js     # イベントハンドラ — setupOptions、setupTmuxListeners、setupZshListeners、setupNeovimListeners、setupClaudeMdListeners
 │   └── init.js         # キーボードナビゲーションと初期化（最後にロード）
 └── tests/
     ├── helpers.mjs     # テストヘルパー — Function コンストラクタでソースを独立スコープにロード
@@ -76,6 +77,7 @@ node --test tests/*.test.mjs
 2. **tmux:** ターミナルマルチプレクサの設定 (.tmux.conf)
 3. **zsh:** Zシェルの設定 (.zshrc)
 4. **Neovim:** テキストエディタの設定 (init.lua)
+5. **CLAUDE.md:** Claude Code 向けプロジェクト設定 (CLAUDE.md)
 
 ### Starship ウィザード（6ステップ）
 
@@ -123,6 +125,15 @@ node --test tests/*.test.mjs
 **対応プラグインマネージャー:**
 - **lazy.nvim:** モダンで高速なプラグインマネージャー（推奨）
 - **packer.nvim:** Lua ベースの定番プラグインマネージャー
+
+### CLAUDE.md ウィザード（5ステップ）
+
+1. **ツール選択:** Starship、tmux、zsh、Neovim、CLAUDE.md を選択
+2. **Step 0 — プロジェクト基本情報:** プロジェクト名（必須）、説明、主要言語（JavaScript/TypeScript・Python・Go・Rust・Java・Ruby・その他）
+3. **Step 1 — 技術スタック・開発コマンド:** フレームワーク/ライブラリ、開発サーバー・ビルド・テスト・リントのコマンド（任意）
+4. **Step 2 — コーディング規約:** 変更最小限、過剰設計を避ける、コミットメッセージ規約、読みやすいコード、外部依存最小化、UI言語、セキュリティ、テスト実行などを複数選択
+5. **Step 3 — AIアシスタント向けガイドライン:** 編集前に読む、スコープ内に留まる、ドキュメント更新、ブランチワークフロー、シンプルに保つ、ブラウザ検証、テスト実行などを複数選択
+6. **Step 4 — 生成結果:** 生成された CLAUDE.md を表示、コピーまたはダウンロード
 
 ## コードアーキテクチャ
 
@@ -222,6 +233,16 @@ Neovim 設定生成・プレビュー。
 | `buildNeovimPreview()` | Neovim エディタのシミュレーションプレビューを作成 |
 | `renderNeovimResult()`, `copyNeovimConfig()`, `downloadNeovimConfig()` | 結果表示、コピー、ダウンロード |
 
+### `js/claudemd.js`
+
+CLAUDE.md 設定生成・Markdown ハイライト。
+
+| 関数 | 役割 |
+|---|---|
+| `highlightMarkdown()` | Markdown 用シンタックスハイライト |
+| `generateClaudeMdConfig()` | CLAUDE.md を生成 |
+| `renderClaudeMdResult()`, `copyClaudeMdConfig()`, `downloadClaudeMdConfig()` | 結果表示、コピー、ダウンロード |
+
 ### `js/init.js`
 
 キーボードナビゲーションのイベントリスナーと初期化処理。すべての JS ファイルの後にロードされる。
@@ -230,11 +251,12 @@ Neovim 設定生成・プレビュー。
 
 HTML構造のみを含みます（CSS・JS は外部ファイル参照）。
 
-- **ツール選択画面:** Starship / tmux / zsh / Neovim を選択
+- **ツール選択画面:** Starship / tmux / zsh / Neovim / CLAUDE.md を選択
 - **Starship ステップ（6ステップ）:** プロンプトスタイル、記号、カラー、モジュール、詳細設定、結果
 - **tmux ステップ（5ステップ）:** 基本設定、カラースキーム、ステータスバー、キーバインド、結果
 - **zsh ステップ（5ステップ）:** プラグイン管理システム、基本設定、プラグイン・テーマ、エイリアス、結果
 - **Neovim ステップ（5ステップ）:** プラグインマネージャー、基本設定、カラースキーム・プラグイン、キーマップ、結果（シミュレーションプレビュー付き）
+- **CLAUDE.md ステップ（5ステップ）:** プロジェクト基本情報、技術スタック・コマンド、コーディング規約、AIガイドライン、結果
 
 ### `css/style.css`
 
