@@ -3,7 +3,8 @@ function selectTool() {
   const toolOption = document.querySelector('.option[data-value="starship"].selected') ||
                       document.querySelector('.option[data-value="tmux"].selected') ||
                       document.querySelector('.option[data-value="zsh"].selected') ||
-                      document.querySelector('.option[data-value="neovim"].selected');
+                      document.querySelector('.option[data-value="neovim"].selected') ||
+                      document.querySelector('.option[data-value="claudemd"].selected');
   if (!toolOption) return;
 
   selectedTool = toolOption.dataset.value;
@@ -12,7 +13,7 @@ function selectTool() {
   document.getElementById('step-tool-selection').classList.remove('visible');
 
   // Show appropriate steps (clear inline styles so CSS classes control visibility)
-  const allStepClasses = ['.starship-step', '.tmux-step', '.zsh-step', '.neovim-step'];
+  const allStepClasses = ['.starship-step', '.tmux-step', '.zsh-step', '.neovim-step', '.claudemd-step'];
   allStepClasses.forEach(cls => {
     document.querySelectorAll(cls).forEach(s => s.style.display = 'none');
   });
@@ -29,6 +30,9 @@ function selectTool() {
   } else if (selectedTool === 'neovim') {
     document.querySelectorAll('.neovim-step').forEach(s => s.style.display = '');
     showNeovimStep(0);
+  } else if (selectedTool === 'claudemd') {
+    document.querySelectorAll('.claudemd-step').forEach(s => s.style.display = '');
+    showClaudeMdStep(0);
   }
 }
 
@@ -48,6 +52,7 @@ function renderProgress() {
   if (selectedTool === 'tmux') totalSteps = TMUX_TOTAL_STEPS;
   if (selectedTool === 'zsh') totalSteps = ZSH_TOTAL_STEPS;
   if (selectedTool === 'neovim') totalSteps = NEOVIM_TOTAL_STEPS;
+  if (selectedTool === 'claudemd') totalSteps = CLAUDE_MD_TOTAL_STEPS;
   for (let i = 0; i < totalSteps; i++) {
     const el = document.createElement('div');
     el.className = 'progress-step';
@@ -121,6 +126,18 @@ function showNeovimStep(index) {
   }
 }
 
+function showClaudeMdStep(index) {
+  document.querySelectorAll('.claudemd-step').forEach((s, i) => {
+    s.classList.toggle('visible', i === index);
+  });
+  currentStep = index;
+  renderProgress();
+
+  if (index === CLAUDE_MD_TOTAL_STEPS - 1) {
+    renderClaudeMdResult();
+  }
+}
+
 function nextStep() {
   if (selectedTool === 'tmux') {
     if (currentStep < TMUX_TOTAL_STEPS - 1) showTmuxStep(currentStep + 1);
@@ -128,6 +145,8 @@ function nextStep() {
     if (currentStep < ZSH_TOTAL_STEPS - 1) showZshStep(currentStep + 1);
   } else if (selectedTool === 'neovim') {
     if (currentStep < NEOVIM_TOTAL_STEPS - 1) showNeovimStep(currentStep + 1);
+  } else if (selectedTool === 'claudemd') {
+    if (currentStep < CLAUDE_MD_TOTAL_STEPS - 1) showClaudeMdStep(currentStep + 1);
   } else {
     if (currentStep < TOTAL_STEPS - 1) showStep(currentStep + 1);
   }
@@ -141,6 +160,8 @@ function prevStep() {
       showZshStep(currentStep - 1);
     } else if (selectedTool === 'neovim') {
       showNeovimStep(currentStep - 1);
+    } else if (selectedTool === 'claudemd') {
+      showClaudeMdStep(currentStep - 1);
     } else {
       showStep(currentStep - 1);
     }
@@ -338,6 +359,29 @@ function goToStart() {
     if (display) display.textContent = cfg.value + cfg.suffix;
   }
 
+  // Reset CLAUDE.md answers
+  claudeMdAnswers.projectName = '';
+  claudeMdAnswers.projectDescription = '';
+  claudeMdAnswers.language = null;
+  claudeMdAnswers.framework = '';
+  claudeMdAnswers.buildCommand = '';
+  claudeMdAnswers.testCommand = '';
+  claudeMdAnswers.devCommand = '';
+  claudeMdAnswers.lintCommand = '';
+  claudeMdAnswers.conventions = [];
+  claudeMdAnswers.aiGuidelines = [];
+
+  // Reset CLAUDE.md DOM elements
+  const claudeMdInputs = [
+    'claudemd-project-name', 'claudemd-project-desc', 'claudemd-framework',
+    'claudemd-dev-command', 'claudemd-build-command',
+    'claudemd-test-command', 'claudemd-lint-command',
+  ];
+  claudeMdInputs.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+
   // Go back to tool selection
   goBackToToolSelection();
 }
@@ -390,6 +434,17 @@ function updateNeovimNextButton(stepIndex) {
   }
 }
 
+function updateClaudeMdNextButton(stepIndex) {
+  const btn = document.getElementById(`btn-claudemd-next-${stepIndex}`);
+  if (!btn) return;
+
+  if (stepIndex === 0) {
+    const nameOk = claudeMdAnswers.projectName.trim() !== '';
+    const langOk = claudeMdAnswers.language !== null;
+    btn.disabled = !(nameOk && langOk);
+  }
+}
+
 // ── Bulk select / deselect ────────────────────────────
 function bulkSelect(dataKey, selectAll) {
   const container = document.querySelector(`.options[data-key="${dataKey}"]`);
@@ -417,5 +472,8 @@ function bulkSelect(dataKey, selectAll) {
   } else if (dataKey.startsWith('neovim-')) {
     const nvimKey = dataKey.replace('neovim-', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
     neovimAnswers[nvimKey] = values;
+  } else if (dataKey.startsWith('claudemd-')) {
+    const cmdKey = dataKey.replace('claudemd-', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+    claudeMdAnswers[cmdKey] = values;
   }
 }

@@ -40,6 +40,7 @@ export function loadContext() {
     'js/tmux.js',
     'js/zsh.js',
     'js/neovim.js',
+    'js/claudemd.js',
   ];
 
   const code = sourceFiles
@@ -73,11 +74,15 @@ export function loadContext() {
       // Neovim
       generateNeovimConfig,
       getNeovimThemeColors,
+      // CLAUDE.md
+      generateClaudeMdConfig,
+      highlightMarkdown,
       // Mutable state references — mutations are visible to generators
-      getAnswers:       () => answers,
-      getTmuxAnswers:   () => tmuxAnswers,
-      getZshAnswers:    () => zshAnswers,
-      getNeovimAnswers: () => neovimAnswers,
+      getAnswers:           () => answers,
+      getTmuxAnswers:       () => tmuxAnswers,
+      getZshAnswers:        () => zshAnswers,
+      getNeovimAnswers:     () => neovimAnswers,
+      getClaudeMdAnswers:   () => claudeMdAnswers,
     };
   `);
 

@@ -26,7 +26,7 @@ document.addEventListener('keydown', (e) => {
 
 // ── Init ──────────────────────────────────────────────
 // Hide all tool-specific steps initially
-document.querySelectorAll('.starship-step, .tmux-step, .zsh-step, .neovim-step').forEach(s => {
+document.querySelectorAll('.starship-step, .tmux-step, .zsh-step, .neovim-step, .claudemd-step').forEach(s => {
   s.style.display = 'none';
 });
 
